@@ -86,6 +86,7 @@ s.on('ended', () => out('La partita è terminata.'));
 
 /* stati del buzzer */
 const T = {
+  lobby: ['Siete dentro', 'Aspettate che l’host avvii il gioco.'],
   locked: ['Votazioni bloccate', 'Aspetta che l’host le apra.'],
   open: ['Premi!', 'Il primo che preme risponde.'],
   answering: ['Tocca a voi', 'Rispondete ora. Aspettate il verdetto.'],

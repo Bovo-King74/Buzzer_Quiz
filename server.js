@@ -4,13 +4,15 @@ const { Server } = require('socket.io'), QR = require('qrcode');
 const app = express(), srv = http.createServer(app);
 const io = new Server(srv, { maxHttpBufferSize: 3e6 });
 const PUB = path.join(__dirname, 'public');
+// Pagina principale: i gruppi vanno al buzzer, /host apre la console
+app.get('/', (q, r) => r.redirect('/player.html'));
+app.get('/host', (q, r) => r.redirect('/host.html'));
 app.use(express.static(PUB));
 
-// Elenco file delle cartelle: aggiungi immagini e ricarica, nessun codice da toccare
+// Elenco degli adesivi chat: aggiungi immagini in public/assets/anim e ricarica
 const ls = (d, re) => { try { return fs.readdirSync(path.join(PUB, d)).filter(f => re.test(f)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })); } catch { return []; } };
 const IMG = /\.(png|jpe?g|gif|webp|svg)$/i;
 app.get('/api/anims', (q, r) => r.json(ls('assets/anim', IMG)));
-app.get('/api/slides', (q, r) => r.json(ls('slides', IMG)));
 
 const games = {};
 const rid = n => crypto.randomBytes(n).toString('hex');
@@ -18,21 +20,21 @@ const mkCode = () => { let c; do c = Array.from({ length: 4 }, () => 'ABCDEFGHJK
 
 // phase: locked | open | answering   (ans = id di chi sta rispondendo)
 const newGame = () => ({
-  code: mkCode(), key: rid(4).toUpperCase(), players: {}, banned: [], phase: 'locked', ans: null,
-  answered: new Set(), order: [], done: false, slide: null, chat: [], last: Date.now(),
+  code: mkCode(), key: rid(4).toUpperCase(), players: {}, banned: [], phase: 'locked', ans: null, started: false,
+  answered: new Set(), order: [], done: false, chat: [], last: Date.now(),
   set: { approve: false, joinOpen: true, chat: true, pts: 1 }
 });
 
 const pub = p => ({ id: p.id, nick: p.nick, avatar: p.avatar, score: p.score, on: !!p.sid, st: p.st });
 const elig = g => Object.values(g.players).some(p => p.st === 'ok' && p.sid && !g.answered.has(p.id));
 const after = g => { if (elig(g)) g.phase = 'open'; else { g.phase = 'locked'; g.done = true; } };
-const mode = (g, p) => p.st === 'pending' ? 'pending' : g.phase === 'locked' ? 'locked'
+const mode = (g, p) => p.st === 'pending' ? 'pending' : !g.started ? 'lobby' : g.phase === 'locked' ? 'locked'
   : g.phase === 'answering' ? (g.ans === p.id ? 'answering' : 'waiting') : (g.answered.has(p.id) ? 'waiting' : 'open');
 
 function sync(g) {
   g.last = Date.now();
   io.to('H' + g.code).emit('state', {
-    code: g.code, phase: g.phase, ans: g.ans, order: g.order, answered: [...g.answered], slide: g.slide,
+    code: g.code, started: g.started, phase: g.phase, ans: g.ans, order: g.order, answered: [...g.answered],
     set: g.set, players: Object.values(g.players).map(pub), banned: g.banned
   });
   const who = g.players[g.ans]?.nick || '';
@@ -75,8 +77,9 @@ io.on('connection', s => {
     const g = G(); if (!g || !a) return;
     const P = g.players[a.id];
     switch (a.type) {
+      case 'start': g.started = true; break;
       case 'open':
-        if (g.phase !== 'locked') break;
+        if (g.phase !== 'locked' || !g.started) break;
         if (g.done) { g.answered.clear(); g.order = []; g.done = false; }
         if (elig(g)) g.phase = 'open';
         break;
@@ -97,7 +100,6 @@ io.on('connection', s => {
         if (['approve', 'joinOpen', 'chat'].includes(a.key)) g.set[a.key] = !!a.v;
         if (a.key === 'pts') g.set.pts = Math.max(1, Math.min(10, parseInt(a.v) || 1));
         break;
-      case 'slide': g.slide = a.name && ls('slides', IMG).includes(a.name) ? a.name : null; break;
       case 'reset': Object.values(g.players).forEach(p => p.score = 0); break;
       case 'end': io.to('P' + g.code).emit('ended'); io.to('H' + g.code).emit('ended'); delete games[g.code]; return;
     }
