@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Host · Quiz animazione</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Avvio -->
+<section id="setup" class="setup" hidden>
+  <h1>Host</h1>
+  <div class="row2">
+    <div class="blk">
+      <h2>Nuova partita</h2>
+      <button class="ok" id="mk">Crea partita</button>
+    </div>
+    <div class="blk">
+      <h2>Collega un altro dispositivo</h2>
+      <input id="jc" placeholder="Codice partita" maxlength="4" autocapitalize="characters">
+      <input id="jk" placeholder="Chiave host" maxlength="8" autocapitalize="characters">
+      <button id="jn">Entra come host</button>
+      <small id="jerr"></small>
+    </div>
+  </div>
+</section>
+
+<!-- Console -->
+<main id="app" hidden>
+  <aside id="rail">
+    <div class="code" id="code"></div>
+    <div class="tg"><span>Chiave host</span><button id="key" style="margin-left:auto">Mostra</button></div>
+    <img id="qr" class="qr" alt="QR code per entrare">
+    <small id="url"></small>
+    <hr>
+    <button class="ok" id="bOpen">Apri votazioni</button>
+    <button id="bLock">Blocca votazioni</button>
+    <div class="two"><button class="ok" id="bOk">Giusta</button><button class="no" id="bKo">Sbagliata</button></div>
+    <button id="bNew">Nuova manche</button>
+    <hr>
+    <select id="sl" aria-label="Slide"></select>
+    <div class="two"><button id="pv">◀ Prec.</button><button id="nx">Succ. ▶</button></div>
+    <div class="two"><button id="bBlank">Mostra codice</button><button class="ok" id="bProj">Apri proiettore</button></div>
+    <hr>
+    <label class="tg"><input type="checkbox" id="sJoin"> Ingressi aperti</label>
+    <label class="tg"><input type="checkbox" id="sApp"> Approva chi entra</label>
+    <label class="tg"><input type="checkbox" id="sChat"> Chat attiva</label>
+    <label class="tg"><input type="number" id="sPts" min="1" max="10"> Punti per risposta</label>
+    <button id="bReset">Azzera punteggi</button>
+    <button class="no" id="bEnd">Termina partita</button>
+    <small>Scorciatoie: spazio apre/blocca, G giusta, S sbagliata, frecce cambiano slide.</small>
+  </aside>
+
+  <section id="stage">
+    <div id="banner" class="locked">
+      <img id="bav" class="av" alt="" hidden>
+      <div><small id="bsm"></small><div class="big" id="bt"></div></div>
+    </div>
+    <ol id="order"></ol>
+    <div id="slide"></div>
+  </section>
+
+  <section id="side">
+    <nav id="tabs">
+      <button data-t="sq" class="on">Squadre</button>
+      <button data-t="ac">Accessi <i id="nPend" hidden></i></button>
+      <button data-t="ch">Chat</button>
+    </nav>
+    <div id="pane">
+      <div id="p-sq"></div>
+      <div id="p-ac" hidden></div>
+      <div id="p-ch" hidden style="display:flex;flex-direction:column;flex:1;min-height:0">
+        <div class="log" id="log"></div>
+        <div class="stk" id="stk"></div>
+        <div class="cin"><input id="ct" maxlength="200" placeholder="Scrivi a tutti"><button class="ok" id="cs">Invia</button></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Proiettore (host.html#proiettore) -->
+<div id="screen" hidden>
+  <img id="simg" alt="">
+  <div id="sjoin"><div class="code" id="scode"></div><img id="sqr" alt=""></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const s = io(), $ = q => document.querySelector(q);
+const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const PROJ = location.hash === '#proiettore';
+let cred = JSON.parse(localStorage.hostGame || 'null'), INFO = null, ST = null, tab = 'sq', slides = [], anims = [], pick = null, keyShown = false;
+const act = (type, x = {}) => s.emit('act', { type, ...x });
+
+function enter(r) {
+  INFO = r; cred = { code: r.code, key: r.key }; localStorage.hostGame = JSON.stringify(cred);
+  $('#setup').hidden = true;
+  if (PROJ) { $('#screen').hidden = false; $('#scode').textContent = r.code; $('#sqr').src = r.qr; return; }
+  $('#app').hidden = false;
+  $('#code').textContent = r.code; $('#qr').src = r.qr; $('#url').textContent = r.url;
+  $('#log').innerHTML = ''; r.hist.forEach(addMsg);
+  loadFiles();
+}
+function join(c, k) {
+  s.emit('host:join', { code: c, key: k, origin: location.origin }, r => {
+    if (r.err) { localStorage.removeItem('hostGame'); cred = null; $('#jerr').textContent = r.err; $('#setup').hidden = PROJ; $('#app').hidden = true; if (PROJ) document.body.innerHTML = '<p style="padding:30px">Apri prima la partita dalla console host, poi premi «Apri proiettore».</p>'; return; }
+    enter(r);
+  });
+}
+s.on('connect', () => cred ? join(cred.code, cred.key) : (PROJ || ($('#setup').hidden = false)));
+$('#mk').onclick = () => s.emit('host:create', { origin: location.origin }, enter);
+$('#jn').onclick = () => join($('#jc').value.trim().toUpperCase(), $('#jk').value.trim().toUpperCase());
+s.on('ended', () => { localStorage.removeItem('hostGame'); location.hash = ''; location.reload(); });
+
+async function loadFiles() {
+  slides = await (await fetch('/api/slides')).json();
+  anims = await (await fetch('/api/anims')).json();
+  $('#sl').innerHTML = '<option value="">— nessuna slide —</option>' + slides.map(f => `<option>${esc(f)}</option>`).join('');
+  $('#stk').innerHTML = anims.map(f => `<img src="assets/anim/${f}" data-f="${f}" alt="">`).join('');
+  if (ST) render();
+}
+
+/* ---------- render ---------- */
+s.on('state', st => { ST = st; render(); });
+function render() {
+  const S = ST, by = Object.fromEntries(S.players.map(p => [p.id, p]));
+  if (PROJ) {
+    $('#simg').hidden = !S.slide; $('#sjoin').hidden = !!S.slide;
+    if (S.slide) $('#simg').src = 'slides/' + encodeURIComponent(S.slide);
+    return;
+  }
+  const A = by[S.ans];
+  $('#banner').className = S.phase;
+  $('#bt').textContent = { locked: 'Votazioni bloccate', open: 'Votazioni aperte', answering: A ? A.nick : '…' }[S.phase];
+  $('#bsm').textContent = S.phase === 'answering' ? 'Sta rispondendo' : S.phase === 'open' ? 'Chi preme per primo risponde' : 'Nessuno può prenotarsi';
+  $('#bav').hidden = !A; if (A) $('#bav').src = A.avatar;
+  $('#bOpen').disabled = S.phase !== 'locked'; $('#bLock').disabled = S.phase === 'locked';
+  $('#bOk').disabled = $('#bKo').disabled = S.phase !== 'answering';
+  $('#sJoin').checked = S.set.joinOpen; $('#sApp').checked = S.set.approve; $('#sChat').checked = S.set.chat;
+  if (document.activeElement !== $('#sPts')) $('#sPts').value = S.set.pts;
+  $('#sl').value = S.slide || '';
+
+  // ordine di prenotazione (visibile solo qui)
+  $('#order').innerHTML = S.order.length ? S.order.map((o, i) => {
+    const p = by[o.id], d = i ? ' +' + ((o.t - S.order[i - 1].t) / 1000).toFixed(1) + 's' : '';
+    const t = new Date(o.t).toLocaleTimeString('it-IT');
+    return `<li class="${o.id === S.ans ? 'cur' : S.answered.includes(o.id) ? 'ko' : ''}"><b>${i + 1}</b>${p ? esc(p.nick) : '(rimosso)'}<small>${t}${d}</small></li>`;
+  }).join('') : '<li class="vuoto">Nessuna prenotazione in questa manche</li>';
+
+  $('#slide').innerHTML = S.slide ? `<img src="slides/${encodeURIComponent(S.slide)}" alt="">` : '';
+
+  // squadre
+  const ok = S.players.filter(p => p.st === 'ok').sort((a, b) => b.score - a.score);
+  $('#p-sq').innerHTML = ok.length ? ok.map((p, i) => `
+    <div class="riga ${p.on ? '' : 'off'}" data-id="${p.id}">
+      <span class="rk">${i + 1}</span><img class="av" src="${p.avatar}" alt="">
+      <span class="nm">${esc(p.nick)}${S.answered.includes(p.id) ? ' ✗' : ''}</span><span class="sc">${p.score}</span>
+      <div class="az"><button data-a="pts" data-v="-1">−1</button><button data-a="pts" data-v="1">+1</button><button data-a="kick">Espelli</button><button class="no" data-a="ban">Banna</button></div>
+    </div>`).join('') : '<p class="vuoto">Nessun gruppo. Fai scansionare il QR code o dai il codice partita.</p>';
+
+  // accessi
+  const pend = S.players.filter(p => p.st === 'pending');
+  $('#nPend').hidden = !pend.length; $('#nPend').textContent = pend.length;
+  $('#p-ac').innerHTML = (pend.length ? '<h2 style="padding:12px">Da approvare</h2>' + pend.map(p => `
+    <div class="riga" data-id="${p.id}"><span></span><img class="av" src="${p.avatar}" alt=""><span class="nm">${esc(p.nick)}</span><span></span>
+    <div class="az"><button class="ok" data-a="approve">Accetta</button><button data-a="reject">Rifiuta</button><button class="no" data-a="ban">Banna</button></div></div>`).join('') : '<p class="vuoto">Nessuno in attesa.</p>')
+    + '<h2 style="padding:12px">Bannati</h2>' + (S.banned.length ? S.banned.map(b => `
+    <div class="riga" data-id="${b.id}"><span></span><span></span><span class="nm">${esc(b.nick)}</span><span></span><div class="az"><button data-a="unban">Riammetti</button></div></div>`).join('') : '<p class="vuoto">Nessun ban.</p>');
+}
+
+/* ---------- comandi ---------- */
+$('#bOpen').onclick = () => act('open'); $('#bLock').onclick = () => act('lock');
+$('#bOk').onclick = () => act('correct'); $('#bKo').onclick = () => act('wrong'); $('#bNew').onclick = () => act('newround');
+$('#bReset').onclick = () => confirm('Azzerare tutti i punteggi?') && act('reset');
+$('#bEnd').onclick = () => confirm('Terminare la partita? Tutti i gruppi verranno disconnessi.') && act('end');
+$('#sJoin').onchange = e => act('set', { key: 'joinOpen', v: e.target.checked });
+$('#sApp').onchange = e => act('set', { key: 'approve', v: e.target.checked });
+$('#sChat').onchange = e => act('set', { key: 'chat', v: e.target.checked });
+$('#sPts').onchange = e => act('set', { key: 'pts', v: e.target.value });
+$('#key').onclick = e => { keyShown = !keyShown; e.target.textContent = keyShown ? INFO.key : 'Mostra'; };
+$('#sl').onchange = e => act('slide', { name: e.target.value });
+const step = d => { if (!slides.length) return; const i = slides.indexOf(ST.slide); act('slide', { name: slides[Math.max(0, Math.min(slides.length - 1, i + d))] }); };
+$('#pv').onclick = () => step(-1); $('#nx').onclick = () => step(1);
+$('#bBlank').onclick = () => act('slide', { name: null });
+$('#bProj').onclick = () => window.open('host.html#proiettore', 'proiettore');
+$('#p-sq').onclick = $('#p-ac').onclick = e => {
+  const b = e.target.closest('button[data-a]'); if (!b) return;
+  const id = b.closest('.riga').dataset.id, a = b.dataset.a;
+  if (a === 'ban' && !confirm('Bannare questo gruppo?')) return;
+  if (a === 'kick' && !confirm('Espellere questo gruppo? Potrà rientrare.')) return;
+  act(a, { id, v: b.dataset.v });
+};
+$('#tabs').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return; tab = b.dataset.t;
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
+  ['sq', 'ac', 'ch'].forEach(t => $('#p-' + t).hidden = t !== tab);
+};
+document.addEventListener('keydown', e => {
+  if (PROJ || !ST || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  if (e.code === 'Space') { e.preventDefault(); act(ST.phase === 'locked' ? 'open' : 'lock'); }
+  else if (e.key === 'g') act('correct'); else if (e.key === 's') act('wrong');
+  else if (e.key === 'ArrowRight') step(1); else if (e.key === 'ArrowLeft') step(-1);
+});
+
+/* ---------- chat ---------- */
+function addMsg(m) {
+  const d = document.createElement('div'); d.className = 'msg' + (m.id === 'host' ? ' me' : '');
+  d.innerHTML = `<b>${esc(m.nick)}</b>${esc(m.text)}${m.anim ? `<img src="assets/anim/${encodeURIComponent(m.anim)}" alt="">` : ''}`;
+  const l = $('#log'); l.append(d); l.scrollTop = l.scrollHeight;
+}
+s.on('chat', m => !PROJ && addMsg(m));
+$('#stk').onclick = e => { const i = e.target.closest('img'); if (!i) return; pick = pick === i.dataset.f ? null : i.dataset.f; document.querySelectorAll('#stk img').forEach(x => x.classList.toggle('on', x.dataset.f === pick)); };
+const send = () => { const t = $('#ct').value.trim(); if (!t && !pick) return; s.emit('chat', { text: t, anim: pick }); $('#ct').value = ''; pick = null; document.querySelectorAll('#stk img').forEach(x => x.classList.remove('on')); };
+$('#cs').onclick = send; $('#ct').onkeydown = e => e.key === 'Enter' && send();
+
+// beep quando qualcuno prenota
+s.on('buzz', () => { if (PROJ) return; try { const c = new (window.AudioContext || window.webkitAudioContext)(), o = c.createOscillator(); o.type = 'square'; o.frequency.value = 880; o.connect(c.destination); o.start(); o.stop(c.currentTime + .18); } catch {} });
+</script>
+</body>
+</html>
