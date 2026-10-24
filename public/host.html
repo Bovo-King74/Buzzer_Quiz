@@ -8,21 +8,24 @@
 </head>
 <body>
 
-<!-- Secondo dispositivo: apri host.html#collega -->
+<!-- Accesso host: parola chiave per creare una stanza, oppure codice+chiave per collegarsi a una esistente -->
 <section id="setup" class="setup" hidden>
+  <a class="hostbtn" href="/player.html">Entra come giocatore</a>
   <h1>Host</h1>
   <div class="row2">
-    <div class="blk">
+    <form class="blk" id="mkf" autocomplete="off">
+      <h2>Crea una nuova stanza</h2>
+      <input id="pw" type="password" placeholder="Parola chiave" autocapitalize="characters" autocomplete="off">
+      <button class="ok" id="mk" type="submit">Crea stanza</button>
+      <small id="merr" class="err"></small>
+    </form>
+    <form class="blk" id="jnf" autocomplete="off">
       <h2>Collega un altro dispositivo</h2>
       <input id="jc" placeholder="Codice partita" maxlength="4" autocapitalize="characters">
       <input id="jk" placeholder="Chiave host" maxlength="8" autocapitalize="characters">
-      <button class="ok" id="jn">Entra come host</button>
-      <small id="jerr"></small>
-    </div>
-    <div class="blk">
-      <h2>Oppure</h2>
-      <button id="mk">Crea una nuova stanza</button>
-    </div>
+      <button id="jn" type="submit">Entra come host</button>
+      <small id="jerr" class="err"></small>
+    </form>
   </div>
 </section>
 
@@ -120,21 +123,25 @@ function enter(r) {
     $('#stk').innerHTML = l.map(f => `<img src="assets/anim/${encodeURIComponent(f)}" data-f="${esc(f)}" alt="">`).join('');
   });
 }
-const create = () => s.emit('host:create', { origin: location.origin }, enter);
+const gate = () => { $('#setup').hidden = false; $('#app').hidden = true; };
 function join(c, k, manual) {
   s.emit('host:join', { code: c, key: k, origin: location.origin }, r => {
     if (!r.err) return enter(r);
     localStorage.removeItem('hostGame'); cred = null;
-    if (manual) { $('#jerr').textContent = r.err; $('#setup').hidden = false; $('#app').hidden = true; } else create();
+    if (manual) $('#jerr').textContent = r.err;
+    gate();
   });
 }
-s.on('connect', () => {
-  if (cred) join(cred.code, cred.key, false);
-  else if (location.hash === '#collega') $('#setup').hidden = false;
-  else create();
-});
-$('#jn').onclick = () => join($('#jc').value.trim().toUpperCase(), $('#jk').value.trim().toUpperCase(), true);
-$('#mk').onclick = create;
+s.on('connect', () => { if (cred) join(cred.code, cred.key, false); else gate(); });
+// la parola chiave viene controllata dal server: senza quella giusta la stanza non nasce
+$('#mkf').onsubmit = e => {
+  e.preventDefault(); $('#merr').textContent = '';
+  s.emit('host:create', { origin: location.origin, pass: $('#pw').value }, r => {
+    if (r.err) { $('#merr').textContent = r.err; $('#pw').select(); return; }
+    $('#pw').value = ''; enter(r);
+  });
+};
+$('#jnf').onsubmit = e => { e.preventDefault(); join($('#jc').value.trim().toUpperCase(), $('#jk').value.trim().toUpperCase(), true); };
 s.on('ended', () => { localStorage.removeItem('hostGame'); location.hash = ''; location.reload(); });
 
 /* ---------- stato ---------- */
@@ -229,10 +236,31 @@ function addMsg(m) {
 s.on('chat', addMsg);
 $('#stk').onclick = e => { const i = e.target.closest('img'); if (!i) return; pick = pick === i.dataset.f ? null : i.dataset.f; document.querySelectorAll('#stk img').forEach(x => x.classList.toggle('on', x.dataset.f === pick)); };
 const send = () => { const t = $('#ct').value.trim(); if (!t && !pick) return; s.emit('chat', { text: t, anim: pick }); $('#ct').value = ''; pick = null; document.querySelectorAll('#stk img').forEach(x => x.classList.remove('on')); };
-$('#cs').onclick = send; $('#ct').onkeydown = e => e.key === 'Enter' && send();
+$('#cs').onclick = send;
+/* NB: un handler on* che restituisce false annulla l'evento e blocca la digitazione (bug di PC/iPhone) */
+$('#ct').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); send(); } };
 
-// segnale acustico quando un gruppo prenota
-s.on('buzz', () => { try { const c = new (window.AudioContext || window.webkitAudioContext)(), o = c.createOscillator(); o.type = 'square'; o.frequency.value = 880; o.connect(c.destination); o.start(); o.stop(c.currentTime + .18); } catch {} });
+/* ---------- suoni ----------
+   File personalizzati in public/sounds: buzzer.mp3, giusto.mp3, sbagliato.mp3 (anche wav/ogg/m4a).
+   Se un file manca si usa un bip generato dal browser. */
+let SND = {};
+const loadSounds = () => fetch('/api/sounds').then(r => r.json()).then(m => {
+  SND = {}; for (const k in m) { const a = new Audio(m[k]); a.preload = 'auto'; SND[k] = a; }
+}).catch(() => {});
+loadSounds();
+function beep(seq) {
+  try {
+    const c = new (window.AudioContext || window.webkitAudioContext)(); let t = c.currentTime;
+    for (const [f, d, type] of seq) { const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.value = f; g.gain.value = .2; o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + d); t += d; }
+  } catch {}
+}
+const FALLBACK = { buzzer: [[880, .18, 'square']], giusto: [[660, .12, 'triangle'], [990, .22, 'triangle']], sbagliato: [[220, .35, 'sawtooth']] };
+function play(k) {
+  const a = SND[k]; if (!a) return beep(FALLBACK[k]);
+  try { a.currentTime = 0; const r = a.play(); if (r && r.catch) r.catch(() => beep(FALLBACK[k])); } catch { beep(FALLBACK[k]); }
+}
+s.on('buzz', () => play('buzzer'));
+s.on('sfx', k => play(k));
 </script>
 </body>
 </html>

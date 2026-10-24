@@ -14,7 +14,7 @@ button:active:not(:disabled){transform:translate(4px,4px);box-shadow:0 0 0 var(-
 button:disabled{opacity:.35;cursor:not-allowed}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:4px solid var(--magenta);outline-offset:2px}
 .ok{background:var(--giallo)}.no{background:var(--magenta);color:#fff}.ghost{background:transparent;color:inherit;box-shadow:none;border-color:currentColor}
-input,select{width:100%;background:var(--gesso);color:var(--nero);border:3px solid var(--nero);padding:.6em;font:inherit}
+input,select{width:100%;background:var(--gesso);color:var(--nero);border:3px solid var(--nero);padding:.6em;font:inherit;font-size:16px}  /* 16px: evita lo zoom automatico di iOS */
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .av{width:48px;height:48px;object-fit:cover;border:3px solid var(--nero);flex:none}
 .hatch{background-image:repeating-linear-gradient(135deg,rgba(0,0,0,.14) 0 10px,transparent 10px 22px)}
@@ -85,6 +85,9 @@ body.pl{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
 .join{min-height:100dvh;padding:5vh 6vw;display:flex;flex-direction:column;justify-content:flex-end;gap:12px}
 .join h1{font-size:clamp(54px,17vw,120px);color:var(--giallo);text-shadow:.04em .04em 0 var(--nero);margin-bottom:8px}
 .join label{display:grid;gap:4px;font-weight:700}
+.hostbtn{position:fixed;top:max(12px,env(safe-area-inset-top));right:12px;z-index:4;background:var(--gesso);color:var(--nero);border:3px solid var(--nero);box-shadow:4px 4px 0 var(--nero);padding:.5em .8em;font:14px/1 'Dela Gothic One',Impact,'Arial Black',sans-serif;text-decoration:none}
+.err{color:#c00;font-weight:700;min-height:1.2em;opacity:1}
+.hostbtn:active{transform:translate(4px,4px);box-shadow:none}
 .selfie{cursor:pointer}
 .selfie span{display:grid;place-items:center;height:130px;border:3px dashed var(--gesso);text-align:center;padding:8px}
 .selfie img{width:130px;height:130px;object-fit:cover;border:3px solid var(--nero);box-shadow:5px 5px 0 var(--nero)}

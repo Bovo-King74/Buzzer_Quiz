@@ -14,6 +14,37 @@ const ls = (d, re) => { try { return fs.readdirSync(path.join(PUB, d)).filter(f 
 const IMG = /\.(png|jpe?g|gif|webp|svg)$/i;
 app.get('/api/anims', (q, r) => r.json(ls('assets/anim', IMG)));
 
+// Suoni personalizzati: metti buzzer / giusto / sbagliato (mp3, wav, ogg, m4a) in public/sounds
+const AUD = /\.(mp3|wav|ogg|m4a|aac)$/i;
+app.get('/api/sounds', (q, r) => {
+  const o = {};
+  for (const f of ls('sounds', AUD)) { const k = f.split('.')[0].toLowerCase(); if (['buzzer', 'giusto', 'sbagliato'].includes(k) && !o[k]) o[k] = 'sounds/' + encodeURIComponent(f); }
+  r.set('Cache-Control', 'no-store').json(o);
+});
+
+// Parola chiave per creare una stanza (cambiabile con la variabile d'ambiente HOST_PASS)
+const HOST_PASS = String(process.env.HOST_PASS || 'KGB').toUpperCase();
+const fails = {};
+const ipOf = s => String(s.handshake.headers['x-forwarded-for'] || s.handshake.address).split(',')[0].trim();
+const passCheck = (s, v) => {
+  const f = fails[ipOf(s)] || (fails[ipOf(s)] = { n: 0, until: 0 });
+  if (Date.now() < f.until) return 'wait';
+  if (String(v || '').trim().toUpperCase() === HOST_PASS) { f.n = 0; return 'ok'; }
+  if (++f.n >= 5) { f.n = 0; f.until = Date.now() + 6e4; }
+  return 'no';
+};
+
+// Avatar di ripiego: iniziale del nome su sfondo colorato
+const xml = t => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const letterAvatar = nick => {
+  const ch = (Array.from(nick)[0] || '?').toUpperCase(), bgs = ['#ffe500', '#ff2fa0', '#00c9b7', '#fffdf5'];
+  let h = 0; for (const c of nick) h = (h * 31 + c.codePointAt(0)) >>> 0;
+  const bg = bgs[h % bgs.length], fg = bg === '#ff2fa0' ? '#ffffff' : '#000000';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${bg}"/><text x="50" y="72" text-anchor="middle" font-family="Impact,Arial Black,sans-serif" font-weight="900" font-size="64" fill="${fg}">${xml(ch)}</text></svg>`;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+};
+const IMG_URI = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/]+=*$/;
+
 const games = {};
 const rid = n => crypto.randomBytes(n).toString('hex');
 const mkCode = () => { let c; do c = Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ'[crypto.randomInt(24)]).join(''); while (games[c]); return c; };
@@ -61,6 +92,8 @@ io.on('connection', s => {
   // ---------- HOST ----------
   s.on('host:create', async (d, cb) => {
     if (typeof cb !== 'function') return;
+    const pc = passCheck(s, d && d.pass);
+    if (pc !== 'ok') return cb({ err: pc === 'wait' ? 'Troppi tentativi, riprova tra un minuto' : 'Parola chiave errata' });
     const g = newGame(); games[g.code] = g;
     s.data = { host: true, code: g.code }; s.join('H' + g.code);
     cb(await info(g, d && d.origin)); sync(g);
@@ -85,10 +118,10 @@ io.on('connection', s => {
         break;
       case 'lock': if (g.phase !== 'locked') { g.phase = 'locked'; g.ans = null; } break;
       case 'correct':
-        if (g.phase === 'answering' && g.players[g.ans]) { g.players[g.ans].score += g.set.pts; g.ans = null; g.phase = 'locked'; g.done = true; }
+        if (g.phase === 'answering' && g.players[g.ans]) { g.players[g.ans].score += g.set.pts; g.ans = null; g.phase = 'locked'; g.done = true; io.to('H' + g.code).emit('sfx', 'giusto'); }
         break;
       case 'wrong':
-        if (g.phase === 'answering' && g.ans) { g.answered.add(g.ans); g.ans = null; after(g); }
+        if (g.phase === 'answering' && g.ans) { g.answered.add(g.ans); g.ans = null; after(g); io.to('H' + g.code).emit('sfx', 'sbagliato'); }
         break;
       case 'newround': g.phase = 'locked'; g.ans = null; g.answered.clear(); g.order = []; g.done = false; break;
       case 'pts': if (P) P.score += Math.max(-99, Math.min(99, Number(a.v) || 0)); break;
@@ -120,8 +153,10 @@ io.on('connection', s => {
       if (g.banned.some(b => b.nick.toLowerCase() === nick.toLowerCase())) return cb({ err: 'Questo nome è bannato' });
       if (Object.values(g.players).some(x => x.nick.toLowerCase() === nick.toLowerCase())) return cb({ err: 'Nome già usato da un altro gruppo' });
       if (!g.set.joinOpen) return cb({ err: 'Gli ingressi sono chiusi' });
-      if (typeof d.avatar !== 'string' || !d.avatar.startsWith('data:image/') || d.avatar.length > 400000) return cb({ err: 'Serve un selfie' });
-      p = { id: rid(4), token: rid(12), nick, avatar: d.avatar, score: 0, st: g.set.approve ? 'pending' : 'ok', sid: s.id };
+      let avatar = d.avatar;
+      if (avatar) { if (typeof avatar !== 'string' || avatar.length > 400000 || !IMG_URI.test(avatar)) return cb({ err: 'Immagine non valida, riprova o entra senza' }); }
+      else avatar = letterAvatar(nick);
+      p = { id: rid(4), token: rid(12), nick, avatar, score: 0, st: g.set.approve ? 'pending' : 'ok', sid: s.id };
       g.players[p.id] = p;
     }
     s.data = { code: g.code, pid: p.id }; s.join('P' + g.code);

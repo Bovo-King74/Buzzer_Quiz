@@ -9,12 +9,13 @@
 <body class="pl">
 
 <section id="join" class="join">
+  <a class="hostbtn" href="/host.html" title="Crea una stanza (serve la parola chiave)">Host</a>
   <h1>Entra in squadra</h1>
   <label>Codice partita<input id="c" maxlength="4" autocapitalize="characters" autocomplete="off"></label>
   <label>Nome del gruppo<input id="n" maxlength="16" autocomplete="off"></label>
-  <label class="selfie">Selfie del gruppo
+  <label class="selfie">Selfie del gruppo <small>(facoltativo)</small>
     <input id="f" type="file" accept="image/*" capture="user" hidden>
-    <span id="ph">Tocca per scattare</span>
+    <span id="ph">Tocca per scattare, oppure salta: useremo l’iniziale del nome</span>
     <img id="pv" alt="" hidden>
   </label>
   <button class="ok" id="go">Entra</button>
@@ -53,13 +54,15 @@ $('#c').value = (new URLSearchParams(location.search).get('c') || (cred && cred.
 /* selfie ridotto a 200x200 prima dell'invio */
 $('#f').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
-  const i = new Image();
+  const i = new Image(), u = URL.createObjectURL(f);
+  i.onerror = () => { URL.revokeObjectURL(u); avatar = null; $('#err').textContent = 'Non riesco a leggere questa foto, riprova o entra senza.'; };
   i.onload = () => {
+    URL.revokeObjectURL(u); $('#err').textContent = '';
     const c = document.createElement('canvas'), m = Math.min(i.width, i.height); c.width = c.height = 200;
     c.getContext('2d').drawImage(i, (i.width - m) / 2, (i.height - m) / 2, m, m, 0, 0, 200, 200);
     avatar = c.toDataURL('image/jpeg', .72); $('#pv').src = avatar; $('#pv').hidden = false; $('#ph').hidden = true;
   };
-  i.src = URL.createObjectURL(f);
+  i.src = u;
 };
 
 function join(d) {
@@ -75,8 +78,8 @@ function join(d) {
 }
 $('#go').onclick = () => {
   const code = $('#c').value.trim().toUpperCase(), nick = $('#n').value.trim();
-  if (!code || !nick || !avatar) { $('#err').textContent = 'Servono codice, nome del gruppo e selfie.'; return; }
-  join({ code, nick, avatar, pid: cred && cred.pid, token: cred && cred.token });
+  if (!code || !nick) { $('#err').textContent = 'Servono codice e nome del gruppo.'; return; }
+  join({ code, nick, avatar: avatar || '', pid: cred && cred.pid, token: cred && cred.token });
 };
 s.on('connect', () => cred && join(cred));
 const out = msg => { localStorage.removeItem('qz'); cred = null; $('#game').hidden = true; $('#join').hidden = false; $('#err').textContent = msg; };
@@ -103,7 +106,7 @@ s.on('me', m => {
   if (!m.chat) $('#chat').hidden = true;
   if (changed && navigator.vibrate && (m.mode === 'open' || m.mode === 'answering')) navigator.vibrate(m.mode === 'open' ? 80 : [120, 60, 120]);
 });
-$('#bz').onpointerdown = () => me.mode === 'open' && s.emit('buzz');
+$('#bz').onpointerdown = () => { if (me.mode === 'open') s.emit('buzz'); };
 
 /* chat */
 fetch('/api/anims').then(r => r.json()).then(l => {
@@ -126,7 +129,20 @@ const send = () => {
   s.emit('chat', { text: t, anim: pick }); $('#ct').value = ''; pick = null;
   document.querySelectorAll('#stk img').forEach(x => x.classList.remove('on'));
 };
-$('#cs').onclick = send; $('#ct').onkeydown = e => e.key === 'Enter' && send();
+$('#cs').onclick = send;
+/* NB: un handler on* che restituisce false annulla l'evento e blocca la digitazione (bug di PC/iPhone) */
+$('#ct').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); send(); } };
+
+/* iPhone: la tastiera non ridimensiona la pagina, quindi la chat segue la parte visibile dello schermo */
+if (window.visualViewport) {
+  const fit = () => {
+    const v = visualViewport, c = $('#chat');
+    c.style.bottom = Math.max(0, innerHeight - v.height - v.offsetTop) + 'px';
+    c.style.height = Math.min(v.height * .72, v.height - 20) + 'px';
+  };
+  visualViewport.addEventListener('resize', fit); visualViewport.addEventListener('scroll', fit); fit();
+  $('#ct').addEventListener('focus', () => setTimeout(() => { fit(); $('#log').scrollTop = $('#log').scrollHeight; }, 300));
+}
 </script>
 </body>
 </html>
