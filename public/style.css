@@ -162,3 +162,140 @@ body.pl{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
 #bStart{width:100%;padding:1em;font-size:22px}
 #lobby .rg{grid-template-columns:52px minmax(0,1fr) auto}
 #lobby .rk,#lobby .sc{display:none}
+
+/* =====================================================================
+   SFONDI ANIMATI  (solo CSS, nessuna immagine)
+   Ogni schermata ha un livello ::before sotto i contenuti (z-index -1).
+   Si muove solo con transform / una variabile registrata, quindi pesa poco sui telefoni.
+   ===================================================================== */
+@property --o{syntax:'<length>';inherits:false;initial-value:0px}
+
+.join,.setup,#zone,#banner,#lobby .top{position:relative;isolation:isolate;overflow:hidden}
+#big{isolation:isolate;overflow:hidden}
+
+:is(.join,.setup,#big,#zone[data-m=open],#banner.open,
+    #zone[data-m=locked],#banner.locked,#lobby .top,
+    #zone[data-m=lobby],#zone[data-m=pending],
+    #zone[data-m=answering],#banner.answering,#zone[data-m=waiting])::before{
+  content:'';position:absolute;z-index:-1;pointer-events:none;will-change:transform}
+
+/* raggi che girano: ingresso, host, QR a schermo intero, votazioni aperte */
+:is(.join,.setup,#big,#zone[data-m=open],#banner.open)::before{
+  left:50%;top:var(--cy,50%);width:130vmax;height:130vmax;margin:-65vmax 0 0 -65vmax;
+  background:repeating-conic-gradient(var(--c1) 0 7.5deg,var(--c2) 7.5deg 15deg);animation:spin var(--t,60s) linear infinite}
+.join,.setup,#big{--c1:#1f2bff;--c2:#1a24d9;--t:90s;--cy:72%}
+#zone[data-m=open]{--c1:#ffe500;--c2:#ffd000;--t:20s;--cy:60%}
+#banner.open{--c1:#ffe500;--c2:#ffd000;--t:18s}
+
+/* strisce di cantiere che scorrono: votazioni bloccate, sala d'attesa dell'host */
+:is(#zone[data-m=locked],#banner.locked,#lobby .top)::before{
+  inset:-60px;background:repeating-linear-gradient(135deg,var(--c1) 0 22px,var(--c2) 22px 44px);animation:slide var(--t,9s) linear infinite}
+#zone[data-m=locked],#banner.locked{--c1:#c9c9c4;--c2:#b9b9b2;--t:12s}
+#lobby .top{--c1:#ffe500;--c2:#ffd800;--t:8s}
+
+/* pallini che salgono: sala d'attesa e attesa di approvazione */
+:is(#zone[data-m=lobby],#zone[data-m=pending])::before{
+  inset:-60px;background:radial-gradient(circle,var(--c1) 0 5px,transparent 5.6px) 0 0/40px 40px;animation:rise var(--t,6s) linear infinite}
+#zone[data-m=lobby]{background:var(--blu);color:var(--gesso);--c1:#3a46ff;--t:6s}
+#zone[data-m=pending]{--c1:rgba(0,0,0,.13);--t:14s}
+
+/* onde che si allargano: tocca a voi / sta rispondendo */
+:is(#zone[data-m=answering],#banner.answering)::before{
+  inset:0;background:repeating-radial-gradient(circle at 50% var(--cy,56%),var(--c1) var(--o) calc(var(--o) + 34px),var(--c2) calc(var(--o) + 34px) calc(var(--o) + 68px));
+  animation:ring 1.3s linear infinite}
+#zone[data-m=answering],#banner.answering{--c1:#ff2fa0;--c2:#e01c8b}
+#banner.answering{--cy:50%}
+
+/* scacchiera che scivola: attesa degli altri */
+#zone[data-m=waiting]::before{
+  inset:-100px;background:conic-gradient(var(--c1) 25%,var(--c2) 0 50%,var(--c1) 0 75%,var(--c2) 0) 0 0/80px 80px;animation:drift 9s linear infinite}
+#zone[data-m=waiting]{--c1:#00c9b7;--c2:#00b5a5}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes slide{to{transform:translate(31.113px,31.113px)}}   /* 44px / radice di 2: giro perfetto */
+@keyframes rise{to{transform:translateY(-40px)}}
+@keyframes drift{to{transform:translate(80px,80px)}}
+@keyframes ring{to{--o:68px}}
+
+/* ---------- Buzzer: ogni stato ha il suo aspetto ---------- */
+#bz{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#bz img{-webkit-user-drag:none;pointer-events:none}
+#bz.down{transform:translateY(12px);box-shadow:0 0 0 var(--nero)}
+#zone[data-m=lobby] #bz:disabled,#zone[data-m=waiting] #bz:disabled{filter:grayscale(1) brightness(.92)}
+#zone[data-m=answering] #bz:disabled{filter:none;transform:translateY(12px);box-shadow:0 0 0 var(--nero);animation:wobble .45s ease-in-out infinite alternate}
+@keyframes wobble{from{rotate:-2.5deg}to{rotate:2.5deg}}
+body.off #bz{filter:grayscale(1);opacity:.4}
+
+/* titolo di stato che "batte" a ogni cambio */
+#zone h2.slam,#bt.slam{animation:slam .38s cubic-bezier(.2,1.6,.4,1)}
+@keyframes slam{from{transform:scale(.6) rotate(-3deg);opacity:0}to{transform:none;opacity:1}}
+
+/* ---------- Punteggio: feedback quando cambia ---------- */
+#sc.pop{animation:pop .7s cubic-bezier(.2,1.8,.4,1)}
+#sc.drop{animation:dropx .5s}
+@keyframes pop{0%{transform:scale(1)}30%{transform:scale(1.45) rotate(-6deg);background:#fff}100%{transform:scale(1)}}
+@keyframes dropx{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.plus{position:absolute;left:50%;top:9%;z-index:2;font:84px/1 'Dela Gothic One',Impact,sans-serif;color:var(--nero);background:var(--giallo);border:4px solid var(--nero);padding:.1em .3em;box-shadow:8px 8px 0 var(--nero);pointer-events:none;animation:plus 1.4s ease-out forwards}
+.plus.neg{background:var(--magenta);color:#fff}
+@keyframes plus{0%{transform:translate(-50%,40px) scale(.4) rotate(-8deg);opacity:0}15%{transform:translate(-50%,0) scale(1.1) rotate(3deg);opacity:1}70%{transform:translate(-50%,-30px) scale(1);opacity:1}100%{transform:translate(-50%,-90px) scale(1);opacity:0}}
+
+/* ---------- Connessione persa ---------- */
+#net{position:fixed;left:0;right:0;top:0;z-index:30;background:var(--nero);color:var(--giallo);text-align:center;font:15px/1 'Dela Gothic One',Impact,sans-serif;padding:calc(.7em + env(safe-area-inset-top)) 1em .7em;border-bottom:4px solid var(--giallo);animation:blink 1.2s steps(2,jump-none) infinite}
+@keyframes blink{50%{background:#3a3a00}}
+
+/* ---------- iPhone: tacca e barra home ---------- */
+#top{padding-top:env(safe-area-inset-top)}
+#zone{padding-bottom:calc(86px + env(safe-area-inset-bottom))}
+#chb{bottom:calc(14px + env(safe-area-inset-bottom));padding:.8em 1.1em;font-size:15px}
+#chb i{animation:blink2 .9s steps(2,jump-none) infinite}
+@keyframes blink2{50%{opacity:.25}}
+
+/* ---------- Chat ---------- */
+.log:empty::before{content:'Ancora nessun messaggio. Scrivi o manda un adesivo!';opacity:.55;padding:6px;font-weight:700}
+.msg{animation:msgin .25s ease-out}
+@keyframes msgin{from{transform:translateY(10px);opacity:0}}
+
+@media (prefers-reduced-motion:reduce){*,*::before{animation:none!important}}
+
+/* ---------- Correzioni dai test ---------- */
+/* il modulo d'ingresso scorre: prima su schermi bassi o in orizzontale veniva tagliato in alto */
+.join{display:block;padding:0;min-height:0;height:100dvh}
+.jin{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:12px;padding:calc(env(safe-area-inset-top) + 58px) 6vw max(5vh,calc(env(safe-area-inset-bottom) + 16px))}
+.jin h1{margin-top:auto}
+@media (max-height:480px){.join h1{font-size:40px}.jin{padding-top:56px}}
+/* host: gli sfondi non devono tagliare la pagina su finestre basse */
+.setup{overflow:visible}
+.setup::before{position:fixed!important}
+/* chi aspetta l'approvazione non vede un buzzer inutilizzabile */
+#zone[data-m=pending] #bz{display:none}
+#zone[data-m=pending] h2{font-size:clamp(44px,14vw,88px)}
+
+/* host su tablet/telefono: prima il gioco, poi chat e impostazioni; lo stato resta in vista */
+@media (max-width:1100px){
+  #stage{order:1;overflow:visible}
+  #side{order:2}
+  #rail{order:3;border-right:0;border-top:6px solid var(--nero)}
+  #banner{position:sticky;top:0;z-index:6;min-height:110px;padding:14px 18px}
+  #banner .big{font-size:clamp(30px,8vw,56px)}
+  #banner .av{width:72px;height:72px}
+  #lobby .code{font-size:clamp(48px,14vw,100px)}
+  #lobby .top img{width:130px;height:130px}
+}
+/* modulo d'ingresso: colonna centrata su tablet e in orizzontale */
+.jin{padding-left:max(6vw,calc((100vw - 520px)/2));padding-right:max(6vw,calc((100vw - 520px)/2))}
+
+/* barra comandi contestuale (telefono) */
+#fab{display:none}
+@media (max-width:1100px){
+  #cmd{display:grid;grid-template-columns:1fr 1fr}
+  #cmd button{border-bottom:3px solid var(--nero);padding:1.2em .4em}
+  #bOk{order:1}#bKo{order:2}#bOpen{order:3}#bLock{order:4}#bNew{order:5;grid-column:1 / -1}
+}
+@media (max-width:700px){
+  #cmd{display:none}
+  body.started #fab{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;position:fixed;left:0;right:0;bottom:0;z-index:8;border-top:6px solid var(--nero);padding-bottom:env(safe-area-inset-bottom);background:var(--nero)}
+  #fab button{padding:1.3em .4em;font-size:18px;border:0;border-right:3px solid var(--nero);box-shadow:none}
+  #fab button:last-child{border-right:0}
+  #fab button:active:not(:disabled){transform:none;background:var(--nero);color:#fff}
+  body.started #app{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+}

@@ -7,9 +7,11 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="pl">
+<div id="net" hidden>Connessione persa… riconnessione</div>
 
 <section id="join" class="join">
   <a class="hostbtn" href="/host.html" title="Crea una stanza (serve la parola chiave)">Host</a>
+  <div class="jin">
   <h1>Entra in squadra</h1>
   <label>Codice partita<input id="c" maxlength="4" autocapitalize="characters" autocomplete="off"></label>
   <label>Nome del gruppo<input id="n" maxlength="16" autocomplete="off"></label>
@@ -20,6 +22,7 @@
   </label>
   <button class="ok" id="go">Entra</button>
   <p id="err"></p>
+  </div>
 </section>
 
 <section id="game" hidden>
@@ -73,7 +76,7 @@ function join(d) {
       $('#join').hidden = false; $('#game').hidden = true; return;
     }
     cred = { code: r.code, pid: r.pid, token: r.token }; localStorage.qz = JSON.stringify(cred);
-    $('#join').hidden = true; $('#game').hidden = false; $('#log').innerHTML = ''; r.hist.forEach(addMsg);
+    $('#join').hidden = true; $('#game').hidden = false; $('#log').innerHTML = ''; r.hist.forEach(addMsg); awake();
   });
 }
 $('#go').onclick = () => {
@@ -96,17 +99,36 @@ const T = {
   waiting: ['Attendi', ''],
   pending: ['In attesa', 'L’host deve approvare il vostro ingresso.']
 };
+function flash(txt, neg) {  // "+1" che vola sopra lo schermo
+  const e = document.createElement('div'); e.className = 'plus' + (neg ? ' neg' : ''); e.textContent = txt;
+  $('#zone').append(e); setTimeout(() => e.remove(), 1500);
+}
+const restart = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
 s.on('me', m => {
-  const changed = m.mode !== me.mode; me = m; chatOn = m.chat;
+  const changed = m.mode !== me.mode, prev = me.score; me = m; chatOn = m.chat;
   $('#av').src = m.avatar; $('#nk').textContent = m.nick; $('#sc').textContent = m.score;
-  $('#zone').dataset.m = m.mode; $('#bz').disabled = m.mode !== 'open';
-  $('#lb').textContent = T[m.mode][0];
+  if (prev !== undefined && m.score !== prev) {
+    const d = m.score - prev; restart($('#sc'), d > 0 ? 'pop' : 'drop'); flash((d > 0 ? '+' : '') + d, d < 0);
+    if (navigator.vibrate) navigator.vibrate(d > 0 ? [60, 40, 60, 40, 120] : 200);
+  }
+  $('#zone').dataset.m = m.mode; $('#bz').disabled = m.mode !== 'open'; $('#bz').classList.remove('down');
+  $('#lb').textContent = T[m.mode][0]; if (changed) restart($('#lb'), 'slam');
   $('#sb').textContent = m.mode === 'waiting' ? (m.who ? `Sta rispondendo ${m.who}.` : 'Avete già risposto in questa manche.') : T[m.mode][1];
   $('#chb').hidden = !m.chat || m.mode === 'pending';
   if (!m.chat) $('#chat').hidden = true;
   if (changed && navigator.vibrate && (m.mode === 'open' || m.mode === 'answering')) navigator.vibrate(m.mode === 'open' ? 80 : [120, 60, 120]);
 });
-$('#bz').onpointerdown = () => { if (me.mode === 'open') s.emit('buzz'); };
+$('#bz').onpointerdown = () => {
+  if (me.mode !== 'open' || !s.connected) return;
+  $('#bz').classList.add('down'); s.emit('buzz');   // il pulsante si abbassa subito, senza aspettare il server
+};
+$('#bz').oncontextmenu = e => e.preventDefault();
+
+/* connessione: avviso se cade, e lo schermo resta acceso durante il gioco */
+const net = () => { $('#net').hidden = s.connected; document.body.classList.toggle('off', !s.connected); };
+s.on('disconnect', net); s.on('connect_error', net); s.on('connect', net);
+let wl; const awake = async () => { try { wl = await navigator.wakeLock.request('screen'); } catch {} };
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && cred) awake(); });
 
 /* chat */
 fetch('/api/anims').then(r => r.json()).then(l => {

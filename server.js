@@ -23,7 +23,7 @@ app.get('/api/sounds', (q, r) => {
 });
 
 // Parola chiave per creare una stanza (cambiabile con la variabile d'ambiente HOST_PASS)
-const HOST_PASS = String(process.env.HOST_PASS || 'KGB').toUpperCase();
+const HOST_PASS = String(process.env.HOST_PASS || 'KJB').toUpperCase();
 const fails = {};
 const ipOf = s => String(s.handshake.headers['x-forwarded-for'] || s.handshake.address).split(',')[0].trim();
 const passCheck = (s, v) => {

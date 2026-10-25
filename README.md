@@ -23,7 +23,7 @@ Il flusso tipico del gioco è questo:
 1. L'host avvia una nuova stanza dal pannello di controllo.
 2. Viene generato un codice partita e una chiave privata per l'host.
 3. I giocatori entrano da un browser mobile usando il codice e il proprio nome.
-4. Devono anche caricare una foto/avatar (selfie) per identificarsi.
+4. Il selfie è facoltativo: senza foto il gruppo riceve un quadrato colorato con l'iniziale del nome.
 5. L'host decide quando avviare la partita e quando aprire le votazioni.
 6. Quando le votazioni sono aperte, il primo gruppo che preme il buzzer ottiene la chance di rispondere.
 7. L'host può confermare se la risposta è corretta o sbagliata, mentre il punteggio e la classifica vengono aggiornati in tempo reale.
@@ -66,6 +66,22 @@ quiz-animazione/
 
 - `public/style.css`
   - fogli di stile dell'intera applicazione
+
+## Grafica
+
+Ogni schermata ha uno sfondo animato fatto solo di CSS (nessuna immagine da caricare):
+
+| Dove | Stato | Animazione |
+|---|---|---|
+| Giocatore | Ingresso, host | raggi che ruotano lentamente |
+| Giocatore | Sala d'attesa | pallini che salgono su fondo blu |
+| Giocatore | Votazioni bloccate | strisce di cantiere che scorrono |
+| Giocatore | Votazioni aperte | raggi gialli veloci + buzzer che pulsa |
+| Giocatore | Tocca a voi | onde magenta che si allargano |
+| Giocatore | Attesa degli altri | scacchiera turchese che scivola |
+| Host | Banner di stato | stesse animazioni, in base alla fase |
+
+Chi ha attivato "Riduci movimento" nel telefono o nel computer vede gli sfondi fermi.
 
 ## Tecnologie utilizzate
 
