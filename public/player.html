@@ -2,57 +2,70 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Quiz animazione</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="pl">
-<div id="net" hidden>Connessione persa… riconnessione</div>
+<div id="net" role="alert" hidden>Connessione persa… riconnessione</div>
 
 <section id="join" class="join">
   <a class="hostbtn" href="/host.html" title="Crea una stanza (serve la parola chiave)">Host</a>
-  <div class="jin">
+  <form class="jin" id="joinform" autocomplete="off">
   <h1>Entra in squadra</h1>
-  <label>Codice partita<input id="c" maxlength="4" autocapitalize="characters" autocomplete="off"></label>
-  <label>Nome del gruppo<input id="n" maxlength="16" autocomplete="off"></label>
+  <label>Codice partita<input id="c" maxlength="4" autocapitalize="characters" autocomplete="off" inputmode="text" enterkeyhint="next"></label>
+  <label>Nome del gruppo<input id="n" maxlength="16" autocomplete="off" enterkeyhint="go"></label>
   <label class="selfie">Selfie del gruppo <small>(facoltativo)</small>
-    <input id="f" type="file" accept="image/*" capture="user" hidden>
+    <input id="f" type="file" accept="image/*" capture="user" hidden aria-label="Carica selfie del gruppo">
     <span id="ph">Tocca per scattare, oppure salta: useremo l’iniziale del nome</span>
     <img id="pv" alt="" hidden>
   </label>
-  <button class="ok" id="go">Entra</button>
+  <button class="ok" id="go" type="submit">Entra</button>
   <p id="err"></p>
-  </div>
+  </form>
 </section>
 
-<section id="game" hidden>
+<main id="game" hidden>
   <header id="top">
     <img id="av" class="av" alt="">
-    <div class="who"><small>Gruppo</small><b id="nk"></b></div>
+    <div class="who"><small>Gruppo</small><b id="nk"></b><span id="rk"></span></div>
     <div id="sc" class="big">0</div>
   </header>
 
   <div id="zone" data-m="locked">
     <button id="bz" disabled aria-label="Buzzer"><img src="assets/buzzer.png" alt=""></button>
-    <h2 id="lb"></h2>
-    <p id="sb"></p>
+    <h2 id="lb" aria-live="polite"></h2>
+    <p id="sb" aria-live="polite"></p>
     <button id="chb">Chat<i id="dot" hidden></i></button>
   </div>
 
-  <div id="chat" hidden>
+  <div id="chat" hidden role="dialog" aria-label="Chat">
     <div class="hd"><h2 style="font-size:24px">Chat</h2><button id="cx">Chiudi</button></div>
     <div class="log" id="log"></div>
     <div class="stk" id="stk"></div>
     <div class="cin"><input id="ct" maxlength="200" placeholder="Scrivi qualcosa"><button class="ok" id="cs">Invia</button></div>
   </div>
-</section>
+
+  <div id="podium" hidden>
+    <h1>🏆 Classifica finale</h1>
+    <div id="podlist"></div>
+    <p id="podmsg">Grazie per aver giocato!</p>
+  </div>
+</main>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const s = io(), $ = q => document.querySelector(q);
 const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let cred = JSON.parse(localStorage.qz || 'null'), me = {}, avatar = null, pick = null, chatOn = true;
-$('#c').value = (new URLSearchParams(location.search).get('c') || (cred && cred.code) || '').toUpperCase();
+
+// T-06: Se l'URL indica una stanza diversa da quella salvata, scarta le credenziali vecchie
+const urlCode = (new URLSearchParams(location.search).get('c') || '').toUpperCase();
+if (urlCode && cred && cred.code !== urlCode) {
+  localStorage.removeItem('qz');
+  cred = null;
+}
+$('#c').value = urlCode || (cred && cred.code) || '';
 
 /* selfie ridotto a 200x200 prima dell'invio */
 $('#f').onchange = e => {
@@ -68,8 +81,13 @@ $('#f').onchange = e => {
   i.src = u;
 };
 
+// T-05 & T-21: Connessione protetta da doppio tap con feedback
 function join(d) {
+  $('#go').disabled = true;
+  $('#go').textContent = 'Connessione…';
   s.emit('join', d, r => {
+    $('#go').disabled = false;
+    $('#go').textContent = 'Entra';
     if (r.err) {
       $('#err').textContent = r.err;
       if (!d.nick) { localStorage.removeItem('qz'); cred = null; }
@@ -79,16 +97,27 @@ function join(d) {
     $('#join').hidden = true; $('#game').hidden = false; $('#log').innerHTML = ''; r.hist.forEach(addMsg); awake();
   });
 }
-$('#go').onclick = () => {
+
+$('#joinform').onsubmit = e => {
+  e.preventDefault();
   const code = $('#c').value.trim().toUpperCase(), nick = $('#n').value.trim();
   if (!code || !nick) { $('#err').textContent = 'Servono codice e nome del gruppo.'; return; }
   join({ code, nick, avatar: avatar || '', pid: cred && cred.pid, token: cred && cred.token });
 };
+
 s.on('connect', () => cred && join(cred));
 const out = msg => { localStorage.removeItem('qz'); cred = null; $('#game').hidden = true; $('#join').hidden = false; $('#err').textContent = msg; };
 s.on('kicked', () => out('Sei stato espulso. Puoi rientrare con il codice.'));
 s.on('banned', () => out('Sei stato bannato dalla partita.'));
 s.on('ended', () => out('La partita è terminata.'));
+
+// T-11: Schermata finale con podio
+s.on('final', list => {
+  $('#podlist').innerHTML = list.slice(0, 10).map((p, i) =>
+    `<div class="rg"><span class="rk">${['🥇','🥈','🥉'][i] || (i+1)}</span><img class="av" src="${p.avatar}" alt=""><span class="nm">${esc(p.nick)}</span><span class="sc">${p.score}</span></div>`
+  ).join('');
+  $('#podium').hidden = false;
+});
 
 /* stati del buzzer */
 const T = {
@@ -107,6 +136,7 @@ const restart = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el
 s.on('me', m => {
   const changed = m.mode !== me.mode, prev = me.score; me = m; chatOn = m.chat;
   $('#av').src = m.avatar; $('#nk').textContent = m.nick; $('#sc').textContent = m.score;
+  if (m.rank && m.total) $('#rk').textContent = `${m.rank}° su ${m.total} gruppi`; else $('#rk').textContent = '';
   if (prev !== undefined && m.score !== prev) {
     const d = m.score - prev; restart($('#sc'), d > 0 ? 'pop' : 'drop'); flash((d > 0 ? '+' : '') + d, d < 0);
     if (navigator.vibrate) navigator.vibrate(d > 0 ? [60, 40, 60, 40, 120] : 200);
@@ -118,14 +148,27 @@ s.on('me', m => {
   if (!m.chat) $('#chat').hidden = true;
   if (changed && navigator.vibrate && (m.mode === 'open' || m.mode === 'answering')) navigator.vibrate(m.mode === 'open' ? 80 : [120, 60, 120]);
 });
+
+// T-13: Feedback immediato al tocco
 $('#bz').onpointerdown = () => {
   if (me.mode !== 'open' || !s.connected) return;
-  $('#bz').classList.add('down'); s.emit('buzz');   // il pulsante si abbassa subito, senza aspettare il server
+  $('#bz').classList.add('down');
+  $('#lb').textContent = 'Premuto!';
+  $('#sb').textContent = 'Aspetta il verdetto…';
+  s.emit('buzz');
 };
 $('#bz').oncontextmenu = e => e.preventDefault();
 
 /* connessione: avviso se cade, e lo schermo resta acceso durante il gioco */
-const net = () => { $('#net').hidden = s.connected; document.body.classList.toggle('off', !s.connected); };
+const net = () => {
+  $('#net').hidden = s.connected;
+  document.body.classList.toggle('off', !s.connected);
+  if (!s.connected) {
+    $('#lb').textContent = 'Non connesso';
+    $('#sb').textContent = 'Riconnessione in corso…';
+    $('#bz').disabled = true;
+  }
+};
 s.on('disconnect', net); s.on('connect_error', net); s.on('connect', net);
 let wl; const awake = async () => { try { wl = await navigator.wakeLock.request('screen'); } catch {} };
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && cred) awake(); });
@@ -152,10 +195,9 @@ const send = () => {
   document.querySelectorAll('#stk img').forEach(x => x.classList.remove('on'));
 };
 $('#cs').onclick = send;
-/* NB: un handler on* che restituisce false annulla l'evento e blocca la digitazione (bug di PC/iPhone) */
 $('#ct').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); send(); } };
 
-/* iPhone: la tastiera non ridimensiona la pagina, quindi la chat segue la parte visibile dello schermo */
+/* iPhone: visualViewport */
 if (window.visualViewport) {
   const fit = () => {
     const v = visualViewport, c = $('#chat');

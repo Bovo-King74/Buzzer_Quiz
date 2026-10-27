@@ -5,9 +5,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Host · Quiz animazione</title>
 <link rel="stylesheet" href="style.css">
+<style>
+#podium { position: fixed; inset: 0; z-index: 20; background: rgba(31,43,255,.95); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 20px; }
+#podium h1 { font-size: clamp(32px, 8vw, 64px); color: var(--giallo); }
+#podlist { width: min(600px, 90vw); max-height: 60vh; overflow: auto; }
+#podium .rg { background: var(--gesso); margin-bottom: 8px; border-radius: 0; }
+#podium button { font-size: 20px; padding: 1em 2em; }
+.lh-warn { background: var(--magenta); color: #fff; padding: 10px; font-weight: 700; margin-bottom: 10px; border: 3px solid var(--nero); }
+</style>
 </head>
 <body>
-<div id="net" hidden>Connessione persa… riconnessione</div>
+<div id="net" role="alert" hidden>Connessione persa… riconnessione</div>
 
 <!-- Accesso host: parola chiave per creare una stanza, oppure codice+chiave per collegarsi a una esistente -->
 <section id="setup" class="setup" hidden>
@@ -16,14 +24,14 @@
   <div class="row2">
     <form class="blk" id="mkf" autocomplete="off">
       <h2>Crea una nuova stanza</h2>
-      <input id="pw" type="password" placeholder="Parola chiave" autocapitalize="characters" autocomplete="off">
+      <input id="pw" type="password" placeholder="Parola chiave" aria-label="Parola chiave" autocapitalize="characters" autocomplete="off">
       <button class="ok" id="mk" type="submit">Crea stanza</button>
       <small id="merr" class="err"></small>
     </form>
     <form class="blk" id="jnf" autocomplete="off">
       <h2>Collega un altro dispositivo</h2>
-      <input id="jc" placeholder="Codice partita" maxlength="4" autocapitalize="characters">
-      <input id="jk" placeholder="Chiave host" maxlength="8" autocapitalize="characters">
+      <input id="jc" placeholder="Codice partita" aria-label="Codice partita" maxlength="4" autocapitalize="characters">
+      <input id="jk" placeholder="Chiave host" aria-label="Chiave host" maxlength="8" autocapitalize="characters">
       <button id="jn" type="submit">Entra come host</button>
       <small id="jerr" class="err"></small>
     </form>
@@ -43,16 +51,18 @@
     <label class="tg"><input type="checkbox" id="sJoin"> Ingressi aperti</label>
     <label class="tg"><input type="checkbox" id="sApp"> Approva chi entra</label>
     <label class="tg"><input type="checkbox" id="sChat"> Chat attiva</label>
+    <label class="tg"><input type="checkbox" id="sAuto"> Riapri dopo "Sbagliata"</label>
     <label class="tg"><input type="number" id="sPts" min="1" max="10"> Punti per risposta</label>
     <hr>
     <button id="bReset">Azzera punteggi</button>
     <button class="no" id="bEnd">Termina partita</button>
-    <small>Scorciatoie: spazio apre e blocca, G giusta, S sbagliata.</small>
+    <small>Scorciatoie: spazio apre e blocca, G giusta, S sbagliata, Z annulla.</small>
   </aside>
 
   <section id="stage">
     <!-- Sala d'attesa -->
     <div id="lobby">
+      <div id="lhWarn" class="lh-warn" hidden>⚠️ Sei su localhost: i telefoni sulla stessa rete Wi-Fi devono connettersi usando l'indirizzo IP del tuo computer (es. http://192.168.x.x:3000/host) per far funzionare il QR code.</div>
       <div class="top">
         <div class="l"><div class="code" id="lcode"></div>
         <p>Inquadra il QR o apri <b id="lhost"></b> dal telefono e digita il codice.</p></div>
@@ -77,6 +87,7 @@
         <button class="ok w" id="bOk">Giusta</button>
         <button class="no w" id="bKo">Sbagliata</button>
         <button id="bNew">Nuova manche</button>
+        <button id="bUndo" title="Annulla (Z)">↩ Annulla</button>
       </div>
       <ol id="order"></ol>
       <div id="sqwrap">
@@ -87,19 +98,25 @@
   </section>
 
   <section id="side">
-    <nav id="tabs">
-      <button data-t="ac" class="on">Accessi <i id="nPend" hidden></i></button>
-      <button data-t="ch">Chat <i id="nChat" hidden></i></button>
+    <nav id="tabs" role="tablist">
+      <button data-t="ac" class="on" role="tab" aria-selected="true">Accessi <i id="nPend" hidden></i></button>
+      <button data-t="ch" role="tab" aria-selected="false">Chat <i id="nChat" hidden></i></button>
     </nav>
     <div id="pane">
-      <div id="p-ac"></div>
-      <div id="p-ch" hidden style="display:flex;flex-direction:column;flex:1;min-height:0">
+      <div id="p-ac" role="tabpanel"></div>
+      <div id="p-ch" role="tabpanel" hidden style="display:flex;flex-direction:column;flex:1;min-height:0">
         <div class="log" id="log"></div>
         <div class="stk" id="stk"></div>
-        <div class="cin"><input id="ct" maxlength="200" placeholder="Scrivi a tutti"><button class="ok" id="cs">Invia</button></div>
+        <div class="cin"><input id="ct" maxlength="200" placeholder="Scrivi a tutti" aria-label="Messaggio chat"><button class="ok" id="cs">Invia</button></div>
       </div>
     </div>
   </section>
+
+  <div id="podium" hidden>
+    <h1>🏆 Classifica finale</h1>
+    <div id="podlist"></div>
+    <button class="ok" onclick="location.reload()">Nuova partita</button>
+  </div>
 </main>
 
 <!-- barra comandi per telefono: cambia in base alla fase -->
@@ -112,10 +129,22 @@
 const s = io(), $ = q => document.querySelector(q);
 const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let prevPhase = null, prevAns = null;
+let lastSqHash = '', lastOrderHash = '', lastAcHash = '';
 let cred = JSON.parse(localStorage.hostGame || 'null'), INFO = null, ST = null, pick = null, keyShown = false;
 const act = (type, x = {}) => s.emit('act', { type, ...x });
 $('#lhost').textContent = $('#hostlink').textContent = location.host;
 $('#hostlink').textContent = location.host + '/host.html#collega';
+
+// T-28: Avviso localhost
+if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+  $('#lhWarn').hidden = false;
+}
+
+// T-28: Wake lock per l'host
+let wl;
+const awake = async () => { try { wl = await navigator.wakeLock.request('screen'); } catch {} };
+awake();
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') awake(); });
 
 /* ---------- la stanza nasce all'apertura della pagina ---------- */
 function enter(r) {
@@ -140,7 +169,7 @@ function join(c, k, manual) {
 const net = () => { $('#net').hidden = s.connected; };
 s.on('disconnect', net); s.on('connect_error', net);
 s.on('connect', () => { net(); if (cred) join(cred.code, cred.key, false); else gate(); });
-// la parola chiave viene controllata dal server: senza quella giusta la stanza non nasce
+
 $('#mkf').onsubmit = e => {
   e.preventDefault(); $('#merr').textContent = '';
   s.emit('host:create', { origin: location.origin, pass: $('#pw').value }, r => {
@@ -150,6 +179,13 @@ $('#mkf').onsubmit = e => {
 };
 $('#jnf').onsubmit = e => { e.preventDefault(); join($('#jc').value.trim().toUpperCase(), $('#jk').value.trim().toUpperCase(), true); };
 s.on('ended', () => { localStorage.removeItem('hostGame'); location.hash = ''; location.reload(); });
+
+s.on('final', list => {
+  $('#podlist').innerHTML = list.slice(0, 10).map((p, i) =>
+    `<div class="rg"><span class="rk">${['🥇','🥈','🥉'][i] || (i+1)}</span><img class="av" src="${p.avatar}" alt=""><span class="nm">${esc(p.nick)}</span><span class="sc">${p.score}</span></div>`
+  ).join('');
+  $('#podium').hidden = false;
+});
 
 /* ---------- stato ---------- */
 s.on('state', st => { ST = st; render(); });
@@ -168,16 +204,18 @@ function render() {
   document.body.classList.toggle('started', S.started);
   $('#lobby').hidden = S.started; $('#play').hidden = !S.started; $('#railjoin').hidden = !S.started;
   $('#sJoin').checked = S.set.joinOpen; $('#sApp').checked = S.set.approve; $('#sChat').checked = S.set.chat;
+  $('#sAuto').checked = S.set.autoReopen;
   if (document.activeElement !== $('#sPts')) $('#sPts').value = S.set.pts;
 
-  // accessi: in attesa e bannati
+  // accessi: in attesa e bannati (T-14: non riscrivere innerHTML se identico)
   const pend = S.players.filter(p => p.st === 'pending');
   $('#nPend').hidden = !pend.length; $('#nPend').textContent = pend.length;
-  $('#p-ac').innerHTML = '<h2 style="padding:12px">In attesa</h2>' + (pend.length ? pend.map(p => `
+  const acHtml = '<h2 style="padding:12px">In attesa</h2>' + (pend.length ? pend.map(p => `
     <div class="riga" data-id="${p.id}"><span></span><img class="av" src="${p.avatar}" alt=""><span class="nm">${esc(p.nick)}</span><span></span>
     <div class="az"><button class="ok" data-a="approve">Accetta</button><button data-a="reject">Rifiuta</button><button class="no" data-a="ban">Banna</button></div></div>`).join('') : '<p class="vuoto">Nessuno in attesa. Attiva «Approva chi entra» per decidere tu chi entra.</p>')
     + '<h2 style="padding:12px">Bannati</h2>' + (S.banned.length ? S.banned.map(b => `
     <div class="riga" data-id="${b.id}"><span></span><span></span><span class="nm">${esc(b.nick)}</span><span></span><div class="az"><button data-a="unban">Riammetti</button></div></div>`).join('') : '<p class="vuoto">Nessun gruppo bannato.</p>');
+  if (acHtml !== lastAcHash) { $('#p-ac').innerHTML = acHtml; lastAcHash = acHtml; }
 
   if (!S.started) {  // sala d'attesa: nessun numero minimo
     $('#lcnt').textContent = plural(ok.length);
@@ -193,21 +231,23 @@ function render() {
   $('#bt').textContent = { locked: 'Votazioni bloccate', open: 'Votazioni aperte', answering: A ? A.nick : '…' }[S.phase];
   $('#bsm').textContent = S.phase === 'answering' ? 'Sta rispondendo' : S.phase === 'open' ? 'Chi preme per primo risponde' : 'Nessuno può prenotarsi';
   $('#bav').hidden = !A; if (A) $('#bav').src = A.avatar;
-  const ready = ok.some(p => p.on);   // serve almeno un gruppo collegato
+  const ready = ok.some(p => p.on);
   $('#bOpen').disabled = S.phase !== 'locked' || !ready; $('#bOpen').textContent = S.phase === 'locked' && !ready ? 'Nessun gruppo collegato' : 'Apri votazioni';
   $('#bLock').disabled = S.phase === 'locked';
   $('#bOk').disabled = $('#bKo').disabled = S.phase !== 'answering';
   const cfg = { locked: [['Apri votazioni', 'ok', 'open', !ready], ['Nuova manche', '', 'newround']], open: [['Blocca', '', 'lock']], answering: [['Giusta', 'ok', 'correct'], ['Sbagliata', 'no', 'wrong']] }[S.phase];
   [...$('#fab').children].forEach((b, i) => { const c = cfg[i]; b.hidden = !c; if (c) { b.textContent = c[0]; b.className = c[1]; b.dataset.a = c[2]; b.disabled = !!c[3]; } });
 
-  // ordine di prenotazione (lo vede solo l'host)
-  $('#order').innerHTML = S.order.length ? S.order.map((o, i) => {
+  // ordine di prenotazione (T-08 e T-14)
+  const orderHtml = S.order.length ? S.order.map((o, i) => {
     const p = by[o.id], d = i ? ' +' + ((o.t - S.order[i - 1].t) / 1000).toFixed(1) + 's' : '';
     return `<li class="${o.id === S.ans ? 'cur' : S.answered.includes(o.id) ? 'ko' : ''}"><b>${i + 1}</b>${p ? esc(p.nick) : '(rimosso)'}<small>${new Date(o.t).toLocaleTimeString('it-IT')}${d}</small></li>`;
   }).join('') : '<li class="vuoto">Nessuna prenotazione in questa manche</li>';
+  if (orderHtml !== lastOrderHash) { $('#order').innerHTML = orderHtml; lastOrderHash = orderHtml; }
 
   $('#cnt').textContent = plural(ok.length);
-  $('#sq').innerHTML = ok.length ? ok.map((p, i) => row(p, S, i)).join('') : '<p class="vuoto">Nessun gruppo connesso.</p>';
+  const sqHtml = ok.length ? ok.map((p, i) => row(p, S, i)).join('') : '<p class="vuoto">Nessun gruppo connesso.</p>';
+  if (sqHtml !== lastSqHash) { $('#sq').innerHTML = sqHtml; lastSqHash = sqHtml; }
 }
 
 /* ---------- comandi ---------- */
@@ -215,11 +255,13 @@ $('#bStart').onclick = () => act('start');
 $('#fab').onclick = e => { const b = e.target.closest('button'); if (b && b.dataset.a) act(b.dataset.a); };
 $('#bOpen').onclick = () => act('open'); $('#bLock').onclick = () => act('lock');
 $('#bOk').onclick = () => act('correct'); $('#bKo').onclick = () => act('wrong'); $('#bNew').onclick = () => act('newround');
+$('#bUndo').onclick = () => act('undo');
 $('#bReset').onclick = () => confirm('Azzerare tutti i punteggi?') && act('reset');
 $('#bEnd').onclick = () => confirm('Terminare la partita? Tutti i gruppi verranno disconnessi.') && act('end');
 $('#sJoin').onchange = e => act('set', { key: 'joinOpen', v: e.target.checked });
 $('#sApp').onchange = e => act('set', { key: 'approve', v: e.target.checked });
 $('#sChat').onchange = e => act('set', { key: 'chat', v: e.target.checked });
+$('#sAuto').onchange = e => act('set', { key: 'autoReopen', v: e.target.checked });
 $('#sPts').onchange = e => act('set', { key: 'pts', v: e.target.value });
 $('#key').onclick = e => { keyShown = !keyShown; e.target.textContent = keyShown ? INFO.key : 'Mostra'; };
 $('#qr').onclick = $('#lqr').onclick = () => $('#big').hidden = false; $('#big').onclick = () => $('#big').hidden = true;
@@ -233,14 +275,22 @@ const manage = e => {
 $('#sq').onclick = $('#lsq').onclick = $('#p-ac').onclick = manage;
 $('#tabs').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
-  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('#tabs button').forEach(x => {
+    x.classList.toggle('on', x === b);
+    x.setAttribute('aria-selected', x === b ? 'true' : 'false');
+  });
   if (b.dataset.t === 'ch') { unread = 0; $('#nChat').hidden = true; setTimeout(() => { const l = $('#log'); l.scrollTop = l.scrollHeight; }, 0); }
   ['ac', 'ch'].forEach(t => $('#p-' + t).hidden = t !== b.dataset.t);
 };
+
+// T-22: Scorciatoie host case-insensitive con supporto Z per Annulla
 document.addEventListener('keydown', e => {
   if (!ST || !ST.started || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  const key = e.key.toLowerCase();
   if (e.code === 'Space') { e.preventDefault(); act(ST.phase === 'locked' ? 'open' : 'lock'); }
-  else if (e.key === 'g') act('correct'); else if (e.key === 's') act('wrong');
+  else if (key === 'g') act('correct');
+  else if (key === 's') act('wrong');
+  else if (key === 'z') act('undo');
 });
 
 /* ---------- chat ---------- */
@@ -254,21 +304,31 @@ s.on('chat', m => { addMsg(m); if (m.id !== 'host' && $('#p-ch').hidden) { $('#n
 $('#stk').onclick = e => { const i = e.target.closest('img'); if (!i) return; pick = pick === i.dataset.f ? null : i.dataset.f; document.querySelectorAll('#stk img').forEach(x => x.classList.toggle('on', x.dataset.f === pick)); };
 const send = () => { const t = $('#ct').value.trim(); if (!t && !pick) return; s.emit('chat', { text: t, anim: pick }); $('#ct').value = ''; pick = null; document.querySelectorAll('#stk img').forEach(x => x.classList.remove('on')); };
 $('#cs').onclick = send;
-/* NB: un handler on* che restituisce false annulla l'evento e blocca la digitazione (bug di PC/iPhone) */
 $('#ct').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); send(); } };
 
-/* ---------- suoni ----------
-   File personalizzati in public/sounds: buzzer.mp3, giusto.mp3, sbagliato.mp3 (anche wav/ogg/m4a).
-   Se un file manca si usa un bip generato dal browser. */
+/* ---------- suoni (T-27: AudioContext riutilizzato) ---------- */
 let SND = {};
 const loadSounds = () => fetch('/api/sounds').then(r => r.json()).then(m => {
   SND = {}; for (const k in m) { const a = new Audio(m[k]); a.preload = 'auto'; SND[k] = a; }
 }).catch(() => {});
 loadSounds();
+
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
 function beep(seq) {
   try {
-    const c = new (window.AudioContext || window.webkitAudioContext)(); let t = c.currentTime;
-    for (const [f, d, type] of seq) { const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.value = f; g.gain.value = .2; o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + d); t += d; }
+    const c = getAudioCtx(); let t = c.currentTime;
+    for (const [f, d, type] of seq) {
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = type; o.frequency.value = f; g.gain.value = .2;
+      o.connect(g); g.connect(c.destination);
+      o.start(t); o.stop(t + d); t += d;
+    }
   } catch {}
 }
 const FALLBACK = { buzzer: [[880, .18, 'square']], giusto: [[660, .12, 'triangle'], [990, .22, 'triangle']], sbagliato: [[220, .35, 'sawtooth']] };

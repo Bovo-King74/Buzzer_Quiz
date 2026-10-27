@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Schermo TV · Quiz animazione</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body { background: var(--blu); color: var(--gesso); min-height: 100dvh; display: flex; flex-direction: column; overflow-x: hidden; }
+#tv-join { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 20px; }
+#tv-join .blk { background: var(--gesso); color: var(--nero); border: 4px solid var(--nero); box-shadow: 8px 8px 0 var(--nero); padding: 30px; width: min(440px, 90vw); display: grid; gap: 16px; }
+#tv-join h1 { font-size: clamp(32px, 6vw, 54px); text-align: center; color: var(--giallo); text-shadow: 3px 3px 0 var(--nero); }
+#tv-join input { font-size: 32px; text-align: center; letter-spacing: .2em; text-transform: uppercase; }
+
+#tv-screen { display: flex; flex-direction: column; flex: 1; min-height: 100dvh; }
+#tv-top { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; background: var(--gesso); color: var(--nero); border-bottom: 6px solid var(--nero); }
+#tv-top .code { font-size: clamp(36px, 5vw, 64px); background: var(--giallo); border: 4px solid var(--nero); padding: 4px 16px; }
+#tv-top .info { font-size: 20px; font-weight: 700; }
+
+#tv-lobby { flex: 1; display: grid; grid-template-columns: minmax(320px, 40%) 1fr; gap: 32px; padding: 40px; align-items: center; }
+#tv-lobby-qr { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; }
+#tv-lobby-qr img { width: min(340px, 40vw); height: min(340px, 40vw); border: 6px solid var(--nero); background: #fff; }
+#tv-lobby-qr p { font-size: 22px; font-weight: 700; max-width: 25ch; }
+#tv-teams-box { background: var(--gesso); color: var(--nero); border: 6px solid var(--nero); box-shadow: 10px 10px 0 var(--nero); max-height: 75vh; overflow-y: auto; padding: 20px; }
+#tv-teams-box h2 { font-size: 28px; margin-bottom: 16px; border-bottom: 4px solid var(--nero); padding-bottom: 8px; }
+#tv-teams-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.tv-team-badge { display: flex; align-items: center; gap: 10px; background: var(--cemento); border: 3px solid var(--nero); padding: 8px 12px; font-weight: 700; font-size: 18px; }
+.tv-team-badge .av { width: 40px; height: 40px; border: 2px solid var(--nero); }
+
+#tv-game { flex: 1; display: grid; grid-template-columns: 1fr 420px; }
+#tv-main { display: flex; flex-direction: column; border-right: 6px solid var(--nero); }
+#tv-banner { padding: 40px; border-bottom: 6px solid var(--nero); display: flex; gap: 32px; align-items: center; min-height: 200px; }
+#tv-banner.locked { background: var(--cemento); color: var(--nero); }
+#tv-banner.open { background: var(--giallo); color: var(--nero); }
+#tv-banner.answering { background: var(--magenta); color: #fff; }
+#tv-banner .big { font-size: clamp(48px, 6vw, 96px); }
+#tv-banner .av { width: 140px; height: 140px; border: 6px solid var(--nero); }
+#tv-order-box { flex: 1; background: var(--gesso); color: var(--nero); padding: 24px; overflow-y: auto; }
+#tv-order-box h3 { font-size: 24px; margin-bottom: 12px; }
+#tv-order-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+#tv-order-list li { display: flex; align-items: center; gap: 14px; padding: 12px 18px; border: 3px solid var(--nero); font-size: 22px; font-weight: 700; }
+#tv-order-list li.cur { background: var(--magenta); color: #fff; }
+#tv-order-list li.ko { text-decoration: line-through; opacity: .5; }
+
+#tv-side { background: var(--gesso); color: var(--nero); display: flex; flex-direction: column; }
+#tv-side h2 { font-size: 26px; padding: 18px; border-bottom: 4px solid var(--nero); }
+#tv-leaderboard { flex: 1; overflow-y: auto; padding: 10px; }
+
+#podium { position: fixed; inset: 0; z-index: 50; background: rgba(31,43,255,.98); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; padding: 30px; }
+#podium h1 { font-size: clamp(42px, 8vw, 84px); color: var(--giallo); text-shadow: 4px 4px 0 var(--nero); }
+#podlist { width: min(700px, 92vw); max-height: 70vh; overflow-y: auto; }
+#podlist .rg { background: var(--gesso); color: var(--nero); margin-bottom: 12px; font-size: 24px; border: 4px solid var(--nero); box-shadow: 6px 6px 0 var(--nero); }
+</style>
+</head>
+<body>
+
+<div id="tv-join">
+  <h1>Schermo Proiettore</h1>
+  <form class="blk" id="tvf" autocomplete="off">
+    <label style="font-weight:700">Codice partita
+      <input id="tvc" maxlength="4" autocapitalize="characters" required autofocus placeholder="ABCD">
+    </label>
+    <button class="ok" type="submit" style="font-size:20px;padding:.8em">Connetti Schermo</button>
+    <small id="tverr" class="err" style="color:red;font-weight:700"></small>
+  </form>
+</div>
+
+<div id="tv-screen" hidden>
+  <header id="tv-top">
+    <div><span style="font-weight:700">PARTITA:</span> <span class="code" id="tvcode"></span></div>
+    <div class="info" id="tvstatus">In attesa dei giocatori</div>
+  </header>
+
+  <div id="tv-lobby">
+    <div id="tv-lobby-qr">
+      <img id="tvqr" alt="QR code per connettersi">
+      <p>Inquadra per giocare<br><span id="tvurl" style="font-size:16px;opacity:.8"></span></p>
+    </div>
+    <div id="tv-teams-box">
+      <h2>Squadre collegate (<span id="tvcount">0</span>)</h2>
+      <div id="tv-teams-list"></div>
+    </div>
+  </div>
+
+  <div id="tv-game" hidden>
+    <div id="tv-main">
+      <div id="tv-banner" class="locked">
+        <img id="tv-bav" class="av" alt="" hidden>
+        <div>
+          <small id="tv-bsm" style="font-size:22px;display:block;margin-bottom:8px"></small>
+          <div class="big" id="tv-bt">Votazioni bloccate</div>
+        </div>
+      </div>
+      <div id="tv-order-box">
+        <h3>Ordine di prenotazione</h3>
+        <ol id="tv-order-list"></ol>
+      </div>
+    </div>
+    <aside id="tv-side">
+      <h2>Classifica</h2>
+      <div id="tv-leaderboard"></div>
+    </aside>
+  </div>
+</div>
+
+<div id="podium" hidden>
+  <h1>🏆 Vincitori del Quiz!</h1>
+  <div id="podlist"></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const s = io(), $ = q => document.querySelector(q);
+const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let currentCode = (new URLSearchParams(location.search).get('c') || localStorage.tvCode || '').toUpperCase();
+let ST = null, tvQr = '';
+
+function connectTv(code) {
+  s.emit('tv:join', { code, origin: location.origin }, r => {
+    if (r && r.err) {
+      $('#tverr').textContent = r.err;
+      $('#tv-join').hidden = false;
+      $('#tv-screen').hidden = true;
+      return;
+    }
+    currentCode = code;
+    localStorage.tvCode = code;
+    $('#tvcode').textContent = code;
+    if (r.qr) {
+      tvQr = r.qr;
+      $('#tvqr').src = r.qr;
+    }
+    $('#tv-join').hidden = true;
+    $('#tv-screen').hidden = false;
+  });
+}
+
+$('#tvf').onsubmit = e => {
+  e.preventDefault();
+  const c = $('#tvc').value.trim().toUpperCase();
+  if (c) connectTv(c);
+};
+
+if (currentCode) {
+  $('#tvc').value = currentCode;
+  s.on('connect', () => connectTv(currentCode));
+}
+
+s.on('state', st => {
+  ST = st;
+  renderTv();
+});
+
+s.on('final', list => {
+  $('#podlist').innerHTML = list.slice(0, 10).map((p, i) =>
+    `<div class="rg"><span class="rk">${['🥇','🥈','🥉'][i] || (i+1)}</span><img class="av" src="${p.avatar}" alt=""><span class="nm">${esc(p.nick)}</span><span class="sc">${p.score}</span></div>`
+  ).join('');
+  $('#podium').hidden = false;
+});
+
+function renderTv() {
+  if (!ST) return;
+  const S = ST;
+  const ok = S.players.filter(p => p.st === 'ok').sort((a, b) => b.score - a.score);
+  const by = Object.fromEntries(S.players.map(p => [p.id, p]));
+
+  $('#tvurl').textContent = `${location.host}/player.html?c=${S.code}`;
+  if (tvQr) $('#tvqr').src = tvQr;
+
+  if (!S.started) {
+    $('#tv-lobby').hidden = false;
+    $('#tv-game').hidden = true;
+    $('#tvstatus').textContent = 'Fase d’ingresso';
+    $('#tvcount').textContent = ok.length;
+    $('#tv-teams-list').innerHTML = ok.map(p => `
+      <div class="tv-team-badge">
+        <img class="av" src="${p.avatar}" alt="">
+        <span>${esc(p.nick)}</span>
+      </div>
+    `).join('') || '<p style="padding:10px;opacity:.7">Nessuna squadra connessa ancora.</p>';
+    return;
+  }
+
+  $('#tv-lobby').hidden = true;
+  $('#tv-game').hidden = false;
+  $('#tvstatus').textContent = 'Partita in corso';
+
+  // Banner
+  const A = by[S.ans];
+  $('#tv-banner').className = S.phase;
+  $('#tv-bt').textContent = { locked: 'Votazioni bloccate', open: 'Votazioni aperte', answering: A ? A.nick : '…' }[S.phase];
+  $('#tv-bsm').textContent = S.phase === 'answering' ? 'Sta rispondendo:' : S.phase === 'open' ? 'Il primo che preme risponde!' : 'In attesa dell’host…';
+  $('#tv-bav').hidden = !A;
+  if (A) $('#tv-bav').src = A.avatar;
+
+  // Ordine buzz
+  $('#tv-order-list').innerHTML = S.order.length ? S.order.map((o, i) => {
+    const p = by[o.id], d = i ? ' +' + ((o.t - S.order[i - 1].t) / 1000).toFixed(1) + 's' : '';
+    return `<li class="${o.id === S.ans ? 'cur' : S.answered.includes(o.id) ? 'ko' : ''}"><b>#${i + 1}</b><span>${p ? esc(p.nick) : '(rimosso)'}</span><small style="margin-left:auto">${d}</small></li>`;
+  }).join('') : '<li style="border:none;opacity:.6">Nessuna prenotazione</li>';
+
+  // Leaderboard
+  $('#tv-leaderboard').innerHTML = ok.map((p, i) => `
+    <div class="rg ${p.id === S.ans ? 'cur' : p.on ? '' : 'off'}">
+      <span class="rk">${['🥇','🥈','🥉'][i] || (i + 1)}</span>
+      <img class="av" src="${p.avatar}" alt="">
+      <span class="nm">${esc(p.nick)}</span>
+      <span class="sc">${p.score}</span>
+    </div>
+  `).join('');
+}
+</script>
+</body>
+</html>
