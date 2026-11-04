@@ -47,7 +47,7 @@ npm install
 
 ## Configurazione
 
-Puoi impostare la variabile d'ambiente `HOST_PASS` per definire la parola chiave necessaria per creare nuove stanze host. Se omessa, il server genererà automaticamente una parola chiave casuale all'avvio e la stamperà nel terminale:
+La parola chiave predefinita per creare nuove stanze host è `KJB`. Puoi impostare la variabile d'ambiente `HOST_PASS` per sostituirla con una parola chiave diversa:
 
 ```bash
 export HOST_PASS="MIACHIAVE"
