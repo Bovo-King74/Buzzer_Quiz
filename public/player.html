@@ -15,7 +15,7 @@
   <a class="hostbtn" href="/host.html" title="Crea una stanza (serve la parola chiave)">Host</a>
   <aside class="live-photo"><img src="assets/quiz-night-generated.jpg" alt="Illustrazione di una squadra attorno a un buzzer" width="900" height="1200"><div><strong>La serata si accende.<br>Il punto lo fate voi.</strong></div></aside>
   <form class="jin" id="joinform" autocomplete="off">
-  <div class="brand">Buzzer<span>Il quiz, insieme.</span></div><h1>Entra in squadra</h1><p class="intro">Una squadra, un telefono. Il prossimo punto è vostro.</p>
+  <div class="brand"><button type="button" class="brand-secret" id="secret-brand" aria-label="Buzzer">Buzzer</button><span>Il quiz, insieme.</span></div><h1>Entra in squadra</h1><p class="intro">Una squadra, un telefono. Il prossimo punto è vostro.</p>
   <label>Codice partita<input id="c" placeholder="ABCD" maxlength="4" autocapitalize="characters" autocomplete="off" inputmode="text" enterkeyhint="next"></label>
   <label>Nome del gruppo<input id="n" placeholder="Come si chiama la squadra?" maxlength="16" autocomplete="off" enterkeyhint="go"></label>
   <label class="selfie">Selfie del gruppo <small>(facoltativo)</small>
@@ -57,6 +57,7 @@
 </main>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/chat-easter-egg.js"></script>
 <script>
 const s = io(), $ = q => document.querySelector(q);
 const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -194,7 +195,7 @@ $('#stk').onclick = e => {
 };
 const send = () => {
   const t = $('#ct').value.trim(); if (!t && !pick) return;
-  s.emit('chat', { text: t, anim: pick }); $('#ct').value = ''; pick = null;
+  openChatEasterEgg(t); s.emit('chat', { text: t, anim: pick }); $('#ct').value = ''; pick = null;
   document.querySelectorAll('#stk img').forEach(x => x.classList.remove('on'));
 };
 $('#cs').onclick = send;
@@ -211,5 +212,12 @@ if (window.visualViewport) {
   $('#ct').addEventListener('focus', () => setTimeout(() => { fit(); $('#log').scrollTop = $('#log').scrollHeight; }, 300));
 }
 </script>
+<dialog id="secret-room" aria-labelledby="secret-title">
+  <div class="secret-heading"><h2 id="secret-title">Reparto domande costose</h2><button type="button" id="secret-close" aria-label="Chiudi il video">Chiudi</button></div>
+  <p>Sette tocchi sul logo. Per trovare le risposte giuste, invece, tutta questa dedizione mai.</p>
+  <video id="secret-video" controls playsinline preload="none" data-src="/assets/video/Perche%CC%81%20questa%20carne%20costa%20cosi%CC%80%20tanto%20.mp4" aria-label="Video sorpresa: perché questa carne costa così tanto"></video>
+  <p class="secret-caption">Il conto è salato. Il vostro punteggio, per fortuna, è ancora a dieta.</p>
+</dialog>
+<script src="/easter-eggs.js" defer></script>
 </body>
 </html>

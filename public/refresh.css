@@ -41,3 +41,14 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,.s
 /* Decorative art keeps scoreboard height and game controls unchanged. */
 #podium .podium-trophy{display:inline-block;width:1em;height:1em;object-fit:contain;vertical-align:-.1em}
 .live-photo img{object-position:center 35%;opacity:1}
+
+/* Hidden in plain sight, still reachable with a keyboard. */
+.brand .brand-secret{display:inline;padding:0;border:0;border-radius:0;background:none;color:inherit;min-height:0;font:inherit;letter-spacing:inherit;line-height:inherit;box-shadow:none}
+.brand .brand-secret:hover{filter:none}.brand .brand-secret:active{transform:none}
+#secret-room{position:fixed;inset:0;margin:auto;width:min(640px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:24px;border:1px solid #58604f;border-radius:12px;background:#171918;color:var(--gesso)}
+#secret-room::backdrop{background:rgba(0,0,0,.8)}
+.secret-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+.secret-heading h2{font-size:24px}.secret-heading button{flex:none}
+#secret-room p{line-height:1.5}#secret-video{display:block;width:100%;max-height:55dvh;margin:20px 0;background:#000}
+.secret-caption{color:#bdc5bd;font-size:14px}
+@media(max-width:480px){#secret-room{padding:16px}.secret-heading{align-items:flex-start}.secret-heading h2{font-size:20px}}

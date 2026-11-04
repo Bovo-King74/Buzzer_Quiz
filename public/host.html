@@ -127,6 +127,7 @@
 <div id="big" hidden><div class="code" id="bcode"></div><img id="bqr" alt=""></div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/chat-easter-egg.js"></script>
 <script>
 const s = io(), $ = q => document.querySelector(q);
 const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -304,7 +305,7 @@ function addMsg(m) {
 let unread = 0;
 s.on('chat', m => { addMsg(m); if (m.id !== 'host' && $('#p-ch').hidden) { $('#nChat').textContent = ++unread; $('#nChat').hidden = false; } });
 $('#stk').onclick = e => { const i = e.target.closest('img'); if (!i) return; pick = pick === i.dataset.f ? null : i.dataset.f; document.querySelectorAll('#stk img').forEach(x => x.classList.toggle('on', x.dataset.f === pick)); };
-const send = () => { const t = $('#ct').value.trim(); if (!t && !pick) return; s.emit('chat', { text: t, anim: pick }); $('#ct').value = ''; pick = null; document.querySelectorAll('#stk img').forEach(x => x.classList.remove('on')); };
+const send = () => { const t = $('#ct').value.trim(); if (!t && !pick) return; openChatEasterEgg(t); s.emit('chat', { text: t, anim: pick }); $('#ct').value = ''; pick = null; document.querySelectorAll('#stk img').forEach(x => x.classList.remove('on')); };
 $('#cs').onclick = send;
 $('#ct').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); send(); } };
 
