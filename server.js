@@ -78,8 +78,7 @@ let HOST_PASS;
 if (process.env.HOST_PASS) {
   HOST_PASS = String(process.env.HOST_PASS).toUpperCase();
 } else {
-  HOST_PASS = crypto.randomBytes(4).toString('hex').toUpperCase();
-  console.log('⚠️  HOST_PASS non impostata. Password generata:', HOST_PASS);
+  HOST_PASS = 'KJB';
 }
 
 const fails = {};
