@@ -5,22 +5,24 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Quiz animazione</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="refresh.css">
 </head>
 <body class="pl">
 <div id="net" role="alert" hidden>Connessione persa… riconnessione</div>
 
 <section id="join" class="join">
   <a class="hostbtn" href="/host.html" title="Crea una stanza (serve la parola chiave)">Host</a>
+  <aside class="live-photo"><img src="assets/live-crowd.jpg" alt="Pubblico e luci durante una serata live"><div><strong>La serata si accende.<br>Il punto lo fate voi.</strong><a href="https://unsplash.com/photos/3MAmj1ZKSZA" target="_blank" rel="noopener">Foto: Unsplash</a></div></aside>
   <form class="jin" id="joinform" autocomplete="off">
-  <h1>Entra in squadra</h1>
-  <label>Codice partita<input id="c" maxlength="4" autocapitalize="characters" autocomplete="off" inputmode="text" enterkeyhint="next"></label>
-  <label>Nome del gruppo<input id="n" maxlength="16" autocomplete="off" enterkeyhint="go"></label>
+  <div class="brand">Buzzer<span>Il quiz, insieme.</span></div><h1>Entra in squadra</h1><p class="intro">Una squadra, un telefono. Il prossimo punto è vostro.</p>
+  <label>Codice partita<input id="c" placeholder="ABCD" maxlength="4" autocapitalize="characters" autocomplete="off" inputmode="text" enterkeyhint="next"></label>
+  <label>Nome del gruppo<input id="n" placeholder="Come si chiama la squadra?" maxlength="16" autocomplete="off" enterkeyhint="go"></label>
   <label class="selfie">Selfie del gruppo <small>(facoltativo)</small>
     <input id="f" type="file" accept="image/*" capture="user" hidden aria-label="Carica selfie del gruppo">
     <span id="ph">Tocca per scattare, oppure salta: useremo l’iniziale del nome</span>
     <img id="pv" alt="" hidden>
   </label>
-  <button class="ok" id="go" type="submit">Entra</button>
+  <button class="ok" id="go" type="submit">Entra in partita</button>
   <p id="err"></p>
   </form>
 </section>
