@@ -5,7 +5,7 @@
 <link rel="icon" type="image/png" sizes="48x48" href="/assets/icons8-cicalino-48.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Host · Quiz animazione</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="/style.css?v=clean-20261104">
 <style>
 #podium { position: fixed; inset: 0; z-index: 20; background: rgba(31,43,255,.95); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 20px; }
 #podium h1 { font-size: clamp(32px, 8vw, 64px); color: var(--giallo); }
@@ -14,7 +14,7 @@
 #podium button { font-size: 20px; padding: 1em 2em; }
 .lh-warn { background: var(--magenta); color: #fff; padding: 10px; font-weight: 700; margin-bottom: 10px; border: 3px solid var(--nero); }
 </style>
-<link rel="stylesheet" href="refresh.css">
+<link rel="stylesheet" href="/refresh.css?v=clean-20261104">
 </head>
 <body>
 <div id="net" role="alert" hidden>Connessione persa… riconnessione</div>
@@ -127,7 +127,7 @@
 <div id="big" hidden><div class="code" id="bcode"></div><img id="bqr" alt=""></div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/chat-easter-egg.js"></script>
+<script src="/chat-easter-egg.js?v=clean-20261104"></script>
 <script>
 const s = io(), $ = q => document.querySelector(q);
 const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));

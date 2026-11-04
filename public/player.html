@@ -5,8 +5,8 @@
 <link rel="icon" type="image/png" sizes="48x48" href="/assets/icons8-cicalino-48.png">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Quiz animazione</title>
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="refresh.css">
+<link rel="stylesheet" href="/style.css?v=clean-20261104">
+<link rel="stylesheet" href="/refresh.css?v=clean-20261104">
 </head>
 <body class="pl">
 <div id="net" role="alert" hidden>Connessione persa… riconnessione</div>
@@ -57,7 +57,7 @@
 </main>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/chat-easter-egg.js"></script>
+<script src="/chat-easter-egg.js?v=clean-20261104"></script>
 <script>
 const s = io(), $ = q => document.querySelector(q);
 const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -218,6 +218,6 @@ if (window.visualViewport) {
   <video id="secret-video" controls playsinline preload="none" data-src="/assets/video/Perche%CC%81%20questa%20carne%20costa%20cosi%CC%80%20tanto%20.mp4" aria-label="Video sorpresa: perché questa carne costa così tanto"></video>
   <p class="secret-caption">Il conto è salato. Il vostro punteggio, per fortuna, è ancora a dieta.</p>
 </dialog>
-<script src="/easter-eggs.js" defer></script>
+<script src="/easter-eggs.js?v=clean-20261104" defer></script>
 </body>
 </html>

@@ -46,7 +46,15 @@ app.get('/avatar/:code/:pid', (q, r) => {
   r.status(404).send('Not found');
 });
 
-app.use(express.static(PUB, { maxAge: '1h' }));
+app.use(express.static(PUB, {
+  maxAge: '1h',
+  setHeaders(res, filePath) {
+    // Revalidate the app shell after deployments; keep media files cached.
+    if (/\.(html|css|js)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
 
 // Elenco degli adesivi chat
 const ls = (d, re) => { try { return fs.readdirSync(path.join(PUB, d)).filter(f => re.test(f)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })); } catch { return []; } };

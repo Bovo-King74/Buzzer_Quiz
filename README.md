@@ -72,3 +72,25 @@ Il server sarà attivo sulla porta 3000 (o sulla porta indicata da `PORT`):
 - `G` o `g`: Risposta Giusta (assegna punti)
 - `S` o `s`: Risposta Sbagliata (passa al prossimo o chiude)
 - `Z` o `z`: Annulla l'ultima azione
+
+## Pubblicazione su Render (servizio esistente)
+
+Il progetto richiede un **Web Service Node**, perché chat e partite usano Socket.IO.
+Nel servizio Render collegato a questo repository controllare:
+
+- Branch: `main`; Root Directory: radice del repository (campo vuoto).
+- Build Command: `npm ci`.
+- Start Command: `npm start`.
+- Health Check Path: `/healthz`.
+- Environment: `HOST_PASS=KJB`, se si vuole usare questa password anche quando è già configurato un valore diverso.
+- Auto-Deploy: `On Commit`, per pubblicare dopo ogni push su `main`.
+
+Se gli aggiornamenti automatici sono disattivati, usare **Manual Deploy → Deploy latest commit** nel servizio esistente. Non occorre creare un altro servizio.
+Aspettare lo stato **Live** e controllare che il commit pubblicato sia quello appena inviato su GitHub.
+Aprire `/player.html` e verificare la presenza del logo Buzzer, dell'interfaccia scura e del CSS `/refresh.css?v=clean-20261104` (risposta HTTP 200).
+HTML, CSS e JavaScript vengono riconvalidati dal browser; le immagini mantengono la cache.
+Una pagina già aperta prima dell'aggiornamento può richiedere un ricaricamento forzato.
+
+Le partite sono conservate in memoria: il deploy/riavvio cancella le stanze attive. Pubblicare tra una sessione e l'altra e usare una sola istanza del servizio.
+
+Documentazione: https://render.com/docs/deploys
