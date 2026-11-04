@@ -37,3 +37,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,.s
 
 .live-photo{display:none}
 @media(min-width:1000px){.join{display:grid;grid-template-columns:1fr 1fr}.live-photo{display:block;position:relative;min-height:100dvh;background:#171918}.live-photo img{width:100%;height:100%;position:absolute;object-fit:cover;opacity:.7}.live-photo>div{position:absolute;bottom:48px;left:40px;right:40px;background:#101112;padding:24px}.live-photo strong{display:block;font-size:36px;line-height:1.15;letter-spacing:-1px}.live-photo a{display:inline-block;margin-top:16px;color:#cbd2cb;font-size:12px}.jin{width:100%;max-width:560px;justify-content:center}.jin h1{margin-top:12px}}
+
+/* Decorative art keeps scoreboard height and game controls unchanged. */
+#podium .podium-trophy{display:inline-block;width:1em;height:1em;object-fit:contain;vertical-align:-.1em}
+.live-photo img{object-position:center 35%;opacity:1}
