@@ -94,3 +94,9 @@ Una pagina già aperta prima dell'aggiornamento può richiedere un ricaricamento
 Le partite sono conservate in memoria: il deploy/riavvio cancella le stanze attive. Pubblicare tra una sessione e l'altra e usare una sola istanza del servizio.
 
 Documentazione: https://render.com/docs/deploys
+
+## Plugin Afterparty
+
+Il dopogioco di bluff è disponibile separatamente su **`/afterparty/`**. Una regia e 2–12 squadre si sfidano in cinque round di storie inventate, risposte anonime e votazioni. Accesso tramite QR, timer sul server, recupero dopo una disconnessione e classifica scaricabile. La password della regia è quella configurata in `HOST_PASS`.
+
+Non modifica schermate o partite del quiz. Il namespace e le stanze sono separati; `AFTERPARTY_ENABLED=false` disattiva il modulo server. Le stanze sono in memoria e vengono cancellate al riavvio. [Regole, architettura e test](plugins/afterparty/README.md).

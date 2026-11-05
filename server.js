@@ -419,4 +419,16 @@ setInterval(() => {
   for (const k in rateLimit) if (now - rateLimit[k].start > 120000) delete rateLimit[k];
 }, 600000);
 
+// Optional isolated add-on: no access to the quiz rooms or events.
+if (process.env.AFTERPARTY_ENABLED !== 'false') {
+  require('./plugins/afterparty')(io, { password: HOST_PASS });
+  app.get('/afterparty/qr/:code', async (req, res) => {
+    if (!/^[A-F0-9]{6}$/.test(req.params.code)) return res.sendStatus(400);
+    try {
+      const url = `${req.protocol}://${req.get('host')}/afterparty/?c=${req.params.code}`;
+      res.type('png').send(await QR.toBuffer(url, { width: 240, margin: 2 }));
+    } catch { res.sendStatus(500); }
+  });
+}
+
 srv.listen(process.env.PORT || 3000, () => console.log('Quiz in ascolto su porta', process.env.PORT || 3000));

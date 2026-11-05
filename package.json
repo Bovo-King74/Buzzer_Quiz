@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node test/test.js"
+    "test": "node test/test.js",
+    "test:afterparty": "node --test test/afterparty.test.js",
+    "test:afterparty:integration": "node --test test/afterparty.integration.js"
   },
   "engines": { "node": ">=18" },
   "dependencies": {

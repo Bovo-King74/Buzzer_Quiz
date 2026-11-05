@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Afterparty · L’archivio dei bluff</title>
+<link rel="icon" href="/assets/icons8-cicalino-48.png" type="image/png">
+<link rel="stylesheet" href="/afterparty/style.css?v=1">
+</head>
+<body>
+<header><a class="wordmark" href="/afterparty/">Afterparty<span>Un dopogioco di Buzzer</span></a><a href="/player.html">Torna al quiz ↗</a></header>
+<div id="connection" role="status">Connessione alla sala…</div>
+<main>
+<section id="entry">
+  <div class="pitch"><p class="edition">L’archivio dei bluff</p><h1>Bugie belle.<br>Amici fregati.</h1><p>Una risposta è nella busta. Le altre le inventate voi. Fatevi credere, poi scoprite chi vi ha fregato.</p><a class="mobile-entry" href="#join-form">Entra o apri una stanza ↓</a><div class="specimen" aria-label="Esempio di domanda"><span>Dal nostro archivio immaginario</span><h2>Il coinquilino robot.</h2><p class="sample-question">È stato restituito al negozio. Qual era il difetto?</p><p>«Lavava solo i piatti che aveva sporcato lui.»</p><small>Qui le storie sono inventate. Le figuracce, vostre.</small></div><p class="facts">2–12 squadre · 5 round · circa 10 minuti<br>Un telefono a squadra e un dispositivo per la regia.</p></div>
+  <div class="entry-forms"><form id="join-form"><h2>Entra nel giro.</h2><label>Nome della squadra<input id="name" maxlength="24" autocomplete="nickname" required placeholder="I soliti sospetti"></label><label>Codice della stanza<input id="code" maxlength="6" minlength="6" pattern="[A-Fa-f0-9]{6}" autocapitalize="characters" spellcheck="false" required placeholder="A1B2C3"></label><button type="submit">Entra nella stanza</button></form>
+  <details id="host-details"><summary>Organizzi tu? Apri una stanza</summary><form id="create-form"><p>La regia mostra le domande e guida i round. Non vota: qualcuno deve fingersi serio.</p><label>Parola chiave host<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Apri il dopogioco</button></form></details>
+  <details><summary>Come si gioca e come si bara male</summary><ol><li>Inventate una risposta credibile in 60 secondi.</li><li>Avete 30 secondi per votare la risposta della busta. Vietato votare la propria.</li><li>1.000 punti se la trovate; 500 per ogni squadra ingannata dal vostro bluff.</li></ol><p>Le risposte uguali si uniscono: ogni autore guadagna 500 punti per voto. Se scrivete proprio la risposta della busta, guadagnate 1.000 punti alla rivelazione. Nessun punto per i voti alle esche dell’archivio.</p></details></div>
+</section>
+<section id="room" hidden>
+  <div class="room-bar"><div><span id="role"></span><h1 id="room-title" tabindex="-1">Sala d’attesa</h1></div><div class="room-tools"><span id="room-code"></span><button id="leave" class="quiet">Esci</button></div></div>
+  <div class="workspace"><section id="stage"></section><aside><h2>La compagnia</h2><p id="count"></p><ol id="players"></ol><p class="fine">Solo storie inventate. Niente dati del quiz principale. Le stanze scadono dopo 6 ore di inattività e al riavvio del server.</p></aside></div>
+</section>
+<p id="error" role="alert"></p>
+<noscript>Per giocare servono JavaScript e una connessione Internet.</noscript>
+</main>
+<footer>Afterparty / un archivio originale, nessuna pretesa di verità.</footer>
+<script src="/socket.io/socket.io.js"></script><script src="/afterparty/app.js?v=1"></script>
+</body></html>
