@@ -1,0 +1,307 @@
+{
+  "family": "iOS outline",
+  "downloaded": "2026-11-05",
+  "icons": [
+    {
+      "key": "settings",
+      "slug": "settings",
+      "url": "https://img.icons8.com/ios/100/settings.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 2597
+    },
+    {
+      "key": "contrast",
+      "slug": "contrast",
+      "url": "https://img.icons8.com/ios/100/contrast.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 2141
+    },
+    {
+      "key": "text",
+      "slug": "text",
+      "url": "https://img.icons8.com/ios/100/text.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 532,
+      "substitutedUnavailableSlug": "text-size"
+    },
+    {
+      "key": "sun",
+      "slug": "sun",
+      "url": "https://img.icons8.com/ios/100/sun.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 1374
+    },
+    {
+      "key": "moon",
+      "slug": "moon-symbol",
+      "url": "https://img.icons8.com/ios/100/moon-symbol.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 1598
+    },
+    {
+      "key": "speaker",
+      "slug": "speaker",
+      "url": "https://img.icons8.com/ios/100/speaker.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 2109
+    },
+    {
+      "key": "muted",
+      "slug": "mute",
+      "url": "https://img.icons8.com/ios/100/mute.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 1089
+    },
+    {
+      "key": "play",
+      "slug": "play",
+      "url": "https://img.icons8.com/ios/100/play.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 846
+    },
+    {
+      "key": "pause",
+      "slug": "pause",
+      "url": "https://img.icons8.com/ios/100/pause.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 389
+    },
+    {
+      "key": "timer",
+      "slug": "timer",
+      "url": "https://img.icons8.com/ios/100/timer.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 2038
+    },
+    {
+      "key": "users",
+      "slug": "user-group-man-man",
+      "url": "https://img.icons8.com/ios/100/user-group-man-man.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 2229
+    },
+    {
+      "key": "trophy",
+      "slug": "trophy",
+      "url": "https://img.icons8.com/ios/100/trophy.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 2137
+    },
+    {
+      "key": "check",
+      "slug": "checked",
+      "url": "https://img.icons8.com/ios/100/checked.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 2409
+    },
+    {
+      "key": "connection",
+      "slug": "wi-fi-connected",
+      "url": "https://img.icons8.com/ios/100/wi-fi-connected.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 3175
+    },
+    {
+      "key": "shuffle",
+      "slug": "shuffle",
+      "url": "https://img.icons8.com/ios/100/shuffle.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 1261
+    },
+    {
+      "key": "duel",
+      "slug": "fencing",
+      "url": "https://img.icons8.com/ios/100/fencing.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 2629,
+      "substitutedUnavailableSlug": "swords"
+    },
+    {
+      "key": "spotlight",
+      "slug": "spotlight",
+      "url": "https://img.icons8.com/ios/100/spotlight.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 2208,
+      "substitutedUnavailableSlug": "stage-light"
+    },
+    {
+      "key": "message",
+      "slug": "speech-bubble",
+      "url": "https://img.icons8.com/ios/100/speech-bubble.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 1969
+    },
+    {
+      "key": "reaction",
+      "slug": "applause",
+      "url": "https://img.icons8.com/ios/100/applause.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 3059
+    },
+    {
+      "key": "more",
+      "slug": "ellipsis",
+      "url": "https://img.icons8.com/ios/100/ellipsis.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 630
+    },
+    {
+      "key": "countdown",
+      "slug": "traffic-light",
+      "url": "https://img.icons8.com/ios/100/traffic-light.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 1253
+    },
+    {
+      "key": "reset",
+      "slug": "restart",
+      "url": "https://img.icons8.com/ios/100/restart.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 1872,
+      "substitutedUnavailableSlug": "reset"
+    },
+    {
+      "key": "close",
+      "slug": "delete-sign",
+      "url": "https://img.icons8.com/ios/100/delete-sign.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 557
+    },
+    {
+      "key": "focus",
+      "slug": "visible",
+      "url": "https://img.icons8.com/ios/100/visible.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 2077
+    },
+    {
+      "key": "motion",
+      "slug": "animation",
+      "url": "https://img.icons8.com/ios/100/animation.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 2266
+    },
+    {
+      "key": "background",
+      "slug": "landscape",
+      "url": "https://img.icons8.com/ios/100/landscape.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 1934
+    },
+    {
+      "key": "volume",
+      "slug": "high-volume",
+      "url": "https://img.icons8.com/ios/100/high-volume.png",
+      "status": 200,
+      "size": [
+        100,
+        100
+      ],
+      "bytes": 2105
+    }
+  ]
+}

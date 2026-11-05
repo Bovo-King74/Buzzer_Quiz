@@ -53,6 +53,10 @@ body { background: var(--blu); color: var(--gesso); min-height: 100dvh; display:
 #podlist .rg { background: var(--gesso); color: var(--nero); margin-bottom: 12px; font-size: 24px; border: 4px solid var(--nero); box-shadow: 6px 6px 0 var(--nero); }
 </style>
 <link rel="stylesheet" href="/refresh.css?v=clean-20261104">
+<link rel="stylesheet" href="/experience.css?v=20261105">
+<link rel="stylesheet" href="/live-ui.css?v=20261105">
+<script src="/experience.js?v=20261105"></script>
+<script src="/live-ui.js?v=20261105"></script>
 </head>
 <body>
 
@@ -175,7 +179,7 @@ function renderTv() {
     $('#tvstatus').textContent = 'Fase d’ingresso';
     $('#tvcount').textContent = ok.length;
     $('#tv-teams-list').innerHTML = ok.map(p => `
-      <div class="tv-team-badge">
+      <div class="tv-team-badge" data-player-id="${p.id}">
         <img class="av" src="${p.avatar}" alt="">
         <span>${esc(p.nick)}</span>
       </div>
@@ -203,7 +207,7 @@ function renderTv() {
 
   // Leaderboard
   $('#tv-leaderboard').innerHTML = ok.map((p, i) => `
-    <div class="rg ${p.id === S.ans ? 'cur' : p.on ? '' : 'off'}">
+    <div data-player-id="${p.id}" class="rg ${p.id === S.ans ? 'cur' : p.on ? '' : 'off'}">
       <span class="rk">${['🥇','🥈','🥉'][i] || (i + 1)}</span>
       <img class="av" src="${p.avatar}" alt="">
       <span class="nm">${esc(p.nick)}</span>
@@ -211,6 +215,7 @@ function renderTv() {
     </div>
   `).join('');
 }
+BuzzerLive.attach(s, 'tv');
 </script>
 </body>
 </html>

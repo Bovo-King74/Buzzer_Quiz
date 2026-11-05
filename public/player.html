@@ -7,6 +7,10 @@
 <title>Quiz animazione</title>
 <link rel="stylesheet" href="/style.css?v=clean-20261104">
 <link rel="stylesheet" href="/refresh.css?v=clean-20261104">
+<link rel="stylesheet" href="/experience.css?v=20261105">
+<link rel="stylesheet" href="/live-ui.css?v=20261105">
+<script src="/experience.js?v=20261105"></script>
+<script src="/live-ui.js?v=20261105"></script>
 </head>
 <body class="pl">
 <div id="net" role="alert" hidden>Connessione persa… riconnessione</div>
@@ -61,7 +65,7 @@
 <script>
 const s = io(), $ = q => document.querySelector(q);
 const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let cred = JSON.parse(localStorage.qz || 'null'), me = {}, avatar = null, pick = null, chatOn = true;
+let cred = (() => { try { return JSON.parse(localStorage.qz || 'null'); } catch { return null; } })(), me = {}, avatar = null, pick = null, chatOn = true;
 
 // T-06: Se l'URL indica una stanza diversa da quella salvata, scarta le credenziali vecchie
 const urlCode = (new URLSearchParams(location.search).get('c') || '').toUpperCase();
@@ -103,7 +107,7 @@ function join(d) {
 }
 
 $('#joinform').onsubmit = e => {
-  e.preventDefault();
+  e.preventDefault(); BuzzerUX.unlock();
   const code = $('#c').value.trim().toUpperCase(), nick = $('#n').value.trim();
   if (!code || !nick) { $('#err').textContent = 'Servono codice e nome del gruppo.'; return; }
   join({ code, nick, avatar: avatar || '', pid: cred && cred.pid, token: cred && cred.token });
@@ -113,6 +117,7 @@ s.on('connect', () => cred && join(cred));
 const out = msg => { localStorage.removeItem('qz'); cred = null; $('#game').hidden = true; $('#join').hidden = false; $('#err').textContent = msg; };
 s.on('kicked', () => out('Sei stato espulso. Puoi rientrare con il codice.'));
 s.on('banned', () => out('Sei stato bannato dalla partita.'));
+s.on('session:replaced', () => out('La squadra è collegata da un altro dispositivo.'));
 s.on('ended', () => out('La partita è terminata.'));
 
 // T-11: Schermata finale con podio
@@ -130,7 +135,11 @@ const T = {
   open: ['Premi!', 'Il primo che preme risponde.'],
   answering: ['Tocca a voi', 'Rispondete ora. Aspettate il verdetto.'],
   waiting: ['Attendi', ''],
-  pending: ['In attesa', 'L’host deve approvare il vostro ingresso.']
+  pending: ['In attesa', 'L’host deve approvare il vostro ingresso.'],
+  paused: ['Partita in pausa', 'L’host riprenderà la manche.'],
+  countdown: ['Pronti al VIA', 'Il buzzer si sblocca quando apre il server.'],
+  spectator: ['Duello in corso', 'Siete spettatori in questa manche.'],
+  queued: ['Prenotazione accettata', 'Siete in coda. Aspettate il vostro turno.']
 };
 function flash(txt, neg) {  // "+1" che vola sopra lo schermo
   const e = document.createElement('div'); e.className = 'plus' + (neg ? ' neg' : ''); e.textContent = txt;
@@ -138,30 +147,56 @@ function flash(txt, neg) {  // "+1" che vola sopra lo schermo
 }
 const restart = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
 s.on('me', m => {
-  const changed = m.mode !== me.mode, prev = me.score; me = m; chatOn = m.chat;
+  const changed = m.mode !== me.mode, prev = me.score, previousRound = me.live?.roundId; me = m;
+  if (m.queued || m.mode !== 'open' || previousRound !== m.live?.roundId) pendingBuzz = false;
+  chatOn = m.chat;
   $('#av').src = m.avatar; $('#nk').textContent = m.nick; $('#sc').textContent = m.score;
   if (m.rank && m.total) $('#rk').textContent = `${m.rank}° su ${m.total} gruppi`; else $('#rk').textContent = '';
   if (prev !== undefined && m.score !== prev) {
     const d = m.score - prev; restart($('#sc'), d > 0 ? 'pop' : 'drop'); flash((d > 0 ? '+' : '') + d, d < 0);
-    if (navigator.vibrate) navigator.vibrate(d > 0 ? [60, 40, 60, 40, 120] : 200);
+    if (BuzzerUX.getPreferences().motion !== 'reduce' && !matchMedia('(prefers-reduced-motion: reduce)').matches && navigator.vibrate) navigator.vibrate(d > 0 ? [60, 40, 60, 40, 120] : 200);
   }
-  $('#zone').dataset.m = m.mode; $('#bz').disabled = m.mode !== 'open'; $('#bz').classList.remove('down');
-  $('#lb').textContent = T[m.mode][0]; if (changed) restart($('#lb'), 'slam');
-  $('#sb').textContent = m.mode === 'waiting' ? (m.who ? `Sta rispondendo ${m.who}.` : 'Avete già risposto in questa manche.') : T[m.mode][1];
+  $('#zone').dataset.m = m.mode; $('#bz').disabled = m.mode !== 'open' || pendingBuzz; $('#bz').classList.remove('down');
+  $('#lb').textContent = (T[m.mode] || T.locked)[0]; if (changed) restart($('#lb'), 'slam');
+  $('#sb').textContent = m.mode === 'waiting' ? (m.who ? `Sta rispondendo ${m.who}.` : 'Avete già risposto in questa manche.') : m.mode === 'queued' ? `Siete ${m.position}° in coda.${m.who ? ' Sta rispondendo ' + m.who + '.' : ''}` : (T[m.mode] || T.locked)[1];
   $('#chb').hidden = !m.chat || m.mode === 'pending';
   if (!m.chat) $('#chat').hidden = true;
-  if (changed && navigator.vibrate && (m.mode === 'open' || m.mode === 'answering')) navigator.vibrate(m.mode === 'open' ? 80 : [120, 60, 120]);
+  if (changed && BuzzerUX.getPreferences().motion !== 'reduce' && !matchMedia('(prefers-reduced-motion: reduce)').matches && navigator.vibrate && (m.mode === 'open' || m.mode === 'answering')) navigator.vibrate(m.mode === 'open' ? 80 : [120, 60, 120]);
 });
 
-// T-13: Feedback immediato al tocco
-$('#bz').onpointerdown = () => {
-  if (me.mode !== 'open' || !s.connected) return;
-  $('#bz').classList.add('down');
-  $('#lb').textContent = 'Premuto!';
-  $('#sb').textContent = 'Aspetta il verdetto…';
-  s.emit('buzz');
-};
-$('#bz').oncontextmenu = e => e.preventDefault();
+// A local press is an acknowledgement of the gesture, never a claim to first place.
+let pendingBuzz = false, buzzSequence = 0;
+function pressBuzzer() {
+  if (me.mode !== 'open' || !s.connected || pendingBuzz) return;
+  pendingBuzz = true;
+  const sequence = ++buzzSequence, roundId = me.live?.roundId;
+  BuzzerUX.unlock().then(() => BuzzerUX.play('press', { channel: 'buzz' }));
+  $('#bz').classList.add('down'); $('#bz').disabled = true;
+  $('#lb').textContent = 'Pressione inviata';
+  $('#sb').textContent = 'Attendo la conferma del server…';
+  s.timeout(4000).emit('buzz', { roundId, requestId: window.crypto?.randomUUID?.() || `${Date.now()}-${sequence}` }, (error, result) => {
+    if (sequence !== buzzSequence || roundId !== me.live?.roundId) return;
+    pendingBuzz = false; $('#bz').classList.remove('down');
+    if (error) {
+      $('#lb').textContent = 'Conferma non ricevuta';
+      $('#sb').textContent = 'Attendi lo stato aggiornato. La rete potrebbe essere lenta.';
+      if (s.connected && cred) join(cred);
+      return;
+    }
+    if (!result?.ok) {
+      $('#lb').textContent = 'Prenotazione non accettata';
+      $('#sb').textContent = result?.error || 'Il round è chiuso o hai già premuto.';
+      $('#bz').disabled = me.mode !== 'open' || !s.connected;
+      return;
+    }
+    BuzzerUX.pulse();
+    $('#lb').textContent = result.position === 1 ? 'Prenotazione accettata · tocca a voi' : 'Prenotazione accettata';
+    $('#sb').textContent = result.position === 1 ? 'Rispondete ora. Aspettate il verdetto.' : `Siete ${result.position}° in coda. Aspettate il vostro turno.`;
+  });
+}
+$('#bz').onpointerdown = event => { if (event.isPrimary && event.button === 0) { event.preventDefault(); pressBuzzer(); } };
+$('#bz').onclick = event => { if (event.detail === 0) pressBuzzer(); };
+$('#bz').oncontextmenu = event => event.preventDefault();
 
 /* connessione: avviso se cade, e lo schermo resta acceso durante il gioco */
 const net = () => {
@@ -170,7 +205,7 @@ const net = () => {
   if (!s.connected) {
     $('#lb').textContent = 'Non connesso';
     $('#sb').textContent = 'Riconnessione in corso…';
-    $('#bz').disabled = true;
+    $('#bz').disabled = true; pendingBuzz = false; ++buzzSequence;
   }
 };
 s.on('disconnect', net); s.on('connect_error', net); s.on('connect', net);
@@ -200,6 +235,8 @@ const send = () => {
 };
 $('#cs').onclick = send;
 $('#ct').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); send(); } };
+
+BuzzerLive.attach(s, 'player');
 
 /* iPhone: visualViewport */
 if (window.visualViewport) {

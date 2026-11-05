@@ -100,3 +100,35 @@ Documentazione: https://render.com/docs/deploys
 Il dopogioco di bluff è disponibile separatamente su **`/afterparty/`**. Una regia e 2–12 squadre si sfidano in cinque round di storie inventate, risposte anonime e votazioni. Accesso tramite QR, timer sul server, recupero dopo una disconnessione e classifica scaricabile. La password della regia è quella configurata in `HOST_PASS`.
 
 Non modifica schermate o partite del quiz. Il namespace e le stanze sono separati; `AFTERPARTY_ENABLED=false` disattiva il modulo server. Le stanze sono in memoria e vengono cancellate al riavvio. [Regole, architettura e test](plugins/afterparty/README.md).
+
+## Regia, feedback e preferenze personali
+
+La barra della regia offre **Via 3–2–1**, **Pausa / Riprendi** e **Modalità**. I comandi classici, la coda, i punteggi e Annulla restano disponibili. La modalità e le scadenze sono visibili anche sui telefoni e sulla TV.
+
+- **Via sincronizzato:** blocca i buzzer durante il countdown e li apre tramite il server. Si può annullare dalla stessa barra.
+- **Duello:** in Modalità scegli due squadre connesse. Gli altri diventano spettatori; “Torna al gioco normale” conclude il duello e prepara una nuova manche.
+- **Estrazione:** seleziona una squadra idonea connessa; puoi escludere le già estratte, azzerare il giro e chiudere il risultato. L’animazione mostra un unico esito già deciso dal server.
+- **Tempo per rispondere:** dopo una prenotazione, scegli 10, 20 o 30 secondi. Pausa, riprendi o resetta il timer; la scadenza non assegna penalità.
+- **Applausometro:** a prenotazioni bloccate, senza duello, apre 8 secondi di reazioni dai telefoni. Il riepilogo non cambia i punti.
+- **Pausa partita:** sospende nuovi buzz, countdown e timer, conservando il tempo residuo.
+
+Il pulsante **Azioni** accanto a ogni squadra apre un pannello con il destinatario indicato. Reazioni, quattro effetti sonori e messaggi rapidi sono privati. **Ci sei?** presenta “Eccomi!” sul telefono e conferma la presenza soltanto all’host. **Spotlight** è invece pubblico su host e TV per 6 secondi. Limiti di frequenza e sovrapposizione evitano invii continui.
+
+Il partecipante sente un breve tono personale al tocco. “Pressione inviata” indica soltanto l’invio: la successiva conferma del server comunica l’accettazione e la posizione in coda. Il suono dell’host segue gli eventi confermati e non viene riprodotto sugli altri telefoni. L’audio si prepara alla prima interazione; **Impostazioni → Prova audio** permette di controllarlo prima di giocare.
+
+**Impostazioni**, su ogni dispositivo, salva localmente tema chiaro/scuro/sistema, contrasto, testo grande, quantità di sfondi animati, movimento, concentrazione, trasparenze e audio. Sono disponibili mute, volumi separati e disattivazione dei suoni ricevuti dalla regia. Le preferenze non cambiano la stanza. Il movimento ridotto del sistema viene sempre rispettato; gli effetti si sospendono nelle schede nascoste.
+
+La riconnessione recupera lo stato corrente e le richieste di presenza ancora valide, senza riprodurre vecchi effetti. Le nuove modalità rimangono in memoria come le partite esistenti: un riavvio del server cancella le stanze.
+
+### Controlli e asset
+
+```bash
+npm test                          # controlli storici, logica modalità e Socket.IO reale
+npm run test:afterparty
+npm run test:afterparty:integration
+npm run test:browser              # opzionale: Node 22+ e Chrome/Chromium locale
+```
+
+Il test browser usa contesti separati per host, partecipanti e TV senza dipendenze aggiuntive. `CHROME_PATH` permette di indicare il browser; artefatti e screenshot finiscono in `.taste-skill/browser/`. Il progetto continua a richiedere Node 18+ per server e test realtime.
+
+Le nuove icone sono **27 PNG Icons8 iOS**, inclusi localmente, con il collegamento di attribuzione visibile nelle pagine e nelle Impostazioni. Conservare questo credito. [Fonti, licenze e sostituzioni](docs/ASSETS.md), [protocollo e compatibilità delle modalità](docs/realtime.md), [verifiche e limiti](docs/VERIFICATION.md).

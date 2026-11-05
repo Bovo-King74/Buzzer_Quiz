@@ -1,5 +1,6 @@
 const express = require('express'), http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto');
 const { Server } = require('socket.io'), QR = require('qrcode');
+const liveGame = require('./lib/live-game');
 
 const app = express(), srv = http.createServer(app);
 app.set('trust proxy', 1);
@@ -8,8 +9,8 @@ app.disable('x-powered-by');
 const io = new Server(srv, {
   maxHttpBufferSize: 512 * 1024,
   pingInterval: 10000,
-  pingTimeout: 10000,
-  connectionStateRecovery: { maxDisconnectionDuration: 120000 }
+  pingTimeout: 10000
+  // Rejoin from current snapshots; never replay old private effects or audio packets.
 });
 const PUB = path.join(__dirname, 'public');
 
@@ -124,26 +125,25 @@ const letterAvatar = nick => {
 };
 const IMG_URI = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/]+=*$/;
 
-const games = {};
+const games = Object.create(null);
 const rid = n => crypto.randomBytes(n).toString('hex');
 const mkCode = () => { let c; do c = Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ'[crypto.randomInt(24)]).join(''); while (games[c]); return c; };
 
 // phase: locked | open | answering   (ans = id di chi sta rispondendo)
 const newGame = (creatorIp) => ({
-  code: mkCode(), key: rid(4).toUpperCase(), players: {}, banned: [], phase: 'locked', ans: null, started: false,
+  code: mkCode(), key: rid(4).toUpperCase(), players: Object.create(null), banned: [], phase: 'locked', ans: null, started: false,
   answered: new Set(), order: [], done: false, chat: [], last: Date.now(),
   set: { approve: false, joinOpen: true, chat: true, pts: 1, autoReopen: true },
-  creatorIp, undo: []
+  creatorIp, undo: [], live: liveGame.init(), ending: false
 });
 
 const pub = p => ({ id: p.id, nick: p.nick, avatar: p.avatar, score: p.score, on: !!p.sid, st: p.st });
-const elig = g => Object.values(g.players).some(p => p.st === 'ok' && p.sid && !g.answered.has(p.id));
+const elig = g => Object.values(g.players).some(p => liveGame.eligible(g, p) && !g.answered.has(p.id) && !g.order.some(o => o.id === p.id));
 const after = g => {
   if (g.set.autoReopen && elig(g)) g.phase = 'open';
   else { g.phase = 'locked'; if (!elig(g)) g.done = true; }
 };
-const mode = (g, p) => p.st === 'pending' ? 'pending' : !g.started ? 'lobby' : g.phase === 'locked' ? 'locked'
-  : g.phase === 'answering' ? (g.ans === p.id ? 'answering' : 'waiting') : (g.answered.has(p.id) ? 'waiting' : 'open');
+const mode = liveGame.mode;
 
 // Snapshot per Annulla (T-09)
 function pushUndo(g) {
@@ -154,6 +154,7 @@ function pushUndo(g) {
     answered: [...g.answered],
     order: [...g.order],
     done: g.done,
+    roundId: g.live.roundId,
     scores: Object.fromEntries(Object.values(g.players).map(p => [p.id, p.score]))
   });
   if (g.undo.length > 10) g.undo.shift();
@@ -170,12 +171,15 @@ function sync(g) {
 }
 
 function _syncNow(g) {
+  if (games[g.code] !== g) return;
+  liveGame.advance(g);
+  const live = liveGame.view(g);
   g.last = Date.now();
   const sorted = Object.values(g.players).filter(x => x.st === 'ok').sort((a, b) => b.score - a.score);
   const total = sorted.length;
   io.to('H' + g.code).emit('state', {
     code: g.code, started: g.started, phase: g.phase, ans: g.ans, order: g.order, answered: [...g.answered],
-    set: g.set, players: Object.values(g.players).map(pub), banned: g.banned
+    live, set: g.set, players: Object.values(g.players).map(pub), banned: g.banned
   });
   const who = g.players[g.ans]?.nick || '';
   for (const p of Object.values(g.players)) {
@@ -183,7 +187,9 @@ function _syncNow(g) {
       const rank = sorted.findIndex(x => x.id === p.id) + 1;
       io.to(p.sid).emit('me', {
         id: p.id, mode: mode(g, p), score: p.score, nick: p.nick, avatar: p.avatar,
-        who: g.ans === p.id ? '' : who, chat: g.set.chat, rank, total
+        who: g.ans === p.id ? '' : who, chat: g.set.chat, rank, total, live,
+        queued: g.order.some(o => o.id === p.id), position: g.order.findIndex(o => o.id === p.id) + 1,
+        presence: p.presence || null
       });
     }
   }
@@ -193,8 +199,20 @@ function drop(g, id, ban) {
   const p = g.players[id]; if (!p) return;
   if (ban) g.banned.push({ id: p.id, nick: p.nick });
   if (p.sid) io.to(p.sid).emit(ban ? 'banned' : 'kicked');
+  if (p.sid) { const socket = io.sockets.sockets.get(p.sid); if (socket) { socket.leave('P' + g.code); socket.data = {}; } }
   delete g.players[id]; g.answered.delete(id);
-  if (g.ans === id) { g.ans = null; after(g); }
+  g.order = g.order.filter(o => o.id !== id);
+  if (g.live.spotlight?.pid === id) g.live.spotlight = null;
+  if (g.live.timer?.pid === id) g.live.timer = null;
+  if (g.live.duel.includes(id)) { g.live.duel = []; liveGame.clearRound(g); }
+  if (g.ans === id) {
+    const next = g.order.find(o => !g.answered.has(o.id) && liveGame.eligible(g, g.players[o.id]));
+    g.live.timer = null;
+    if (next) {
+      g.ans = next.id; g.phase = 'answering';
+      io.to('H' + g.code).emit('buzz', { id: rid(8), roundId: g.live.roundId });
+    } else { g.ans = null; after(g); }
+  }
 }
 
 const reserved = ['host', 'admin', 'moderatore', 'sistema'];
@@ -202,9 +220,32 @@ const reserved = ['host', 'admin', 'moderatore', 'sistema'];
 io.on('connection', s => {
   s.data = {};
   const G = () => s.data.host && games[s.data.code];
-  const info = async (g, origin) => {
+  const info = async (g, origin, host = true) => {
     const url = `${origin || ''}/player.html?c=${g.code}`;
-    return { code: g.code, key: g.key, url, qr: await QR.toDataURL(url, { margin: 1, width: 400 }), hist: g.chat };
+    return { code: g.code, ...(host ? { key: g.key } : {}), url, qr: await QR.toDataURL(url, { margin: 1, width: 400 }), hist: g.chat, final: g.final || null };
+  };
+
+  const leaveIdentity = () => {
+    const previous = games[s.data.code], player = previous && previous.players[s.data.pid];
+    if (player?.sid === s.id) { player.sid = null; sync(previous); }
+    if (s.data.code) { s.leave('H' + s.data.code); s.leave('P' + s.data.code); }
+    s.data = {};
+  };
+  const playerIdentity = () => {
+    const g = games[s.data.code], p = g && g.players[s.data.pid];
+    return p && p.sid === s.id && p.st === 'ok' ? { g, p } : {};
+  };
+  const answer = (cb, result) => { if (typeof cb === 'function') cb(result); };
+  const request = (event, d, cb, fn) => {
+    d = d && typeof d === 'object' ? d : {};
+    const cache = s.data.requests || (s.data.requests = new Map());
+    const requestId = typeof d.requestId === 'string' ? d.requestId.slice(0, 80) : '';
+    const key = event + ':' + requestId;
+    if (requestId && cache.has(key)) return answer(cb, cache.get(key));
+    let result;
+    try { result = fn(d); } catch { result = liveGame.fail('Richiesta non valida'); }
+    if (requestId) { cache.set(key, result); if (cache.size > 100) cache.delete(cache.keys().next().value); }
+    answer(cb, result);
   };
 
   // ---------- HOST ----------
@@ -217,6 +258,7 @@ io.on('connection', s => {
     const roomCount = Object.values(games).filter(g => g.creatorIp === ip).length;
     if (roomCount >= 3) return cb({ err: 'Troppe stanze create. Chiudi una stanza prima di crearne una nuova.' });
     const g = newGame(ip); games[g.code] = g;
+    leaveIdentity();
     s.data = { host: true, code: g.code }; s.join('H' + g.code);
     cb(await info(g, d && d.origin)); sync(g);
   });
@@ -227,6 +269,7 @@ io.on('connection', s => {
     if (!checkRate(ip, 'host:join', 10, 60000)) return cb({ err: 'Troppi tentativi, riprova tra un minuto' });
     const g = games[String(d.code || '').toUpperCase()];
     if (!g || g.key !== String(d.key || '').trim().toUpperCase()) return cb({ err: 'Codice o chiave host non validi' });
+    leaveIdentity();
     s.data = { host: true, code: g.code }; s.join('H' + g.code);
     cb(await info(g, d.origin)); sync(g);
   });
@@ -236,23 +279,26 @@ io.on('connection', s => {
     if (typeof cb !== 'function') return;
     const g = games[String(d && d.code || '').toUpperCase()];
     if (!g) return cb({ err: 'Codice partita non trovato' });
+    leaveIdentity();
     s.data = { tv: true, code: g.code };
     s.join('H' + g.code);
-    cb(await info(g, d && d.origin));
+    cb(await info(g, d && d.origin, false));
     sync(g);
   });
 
   s.on('act', a => {
-    const g = G(); if (!g || !a) return;
+    const g = G(); if (!g || !a || typeof a !== 'object' || g.ending) return;
+    liveGame.advance(g);
+    if ((g.live.paused || g.live.countdown || (g.live.applause && !g.live.applause.closed)) && !['kick', 'ban', 'reject', 'approve', 'unban', 'set', 'end', 'newround'].includes(a.type)) return;
     const P = g.players[a.id];
     switch (a.type) {
       case 'start': g.started = true; break;
       case 'open':
         if (g.phase !== 'locked' || !g.started) break;
-        if (g.done) { g.answered.clear(); g.order = []; g.done = false; }
+        if (g.done) liveGame.clearRound(g);
         if (elig(g)) g.phase = 'open';
         break;
-      case 'lock': if (g.phase !== 'locked') { g.phase = 'locked'; g.ans = null; } break;
+      case 'lock': if (g.phase !== 'locked') { g.phase = 'locked'; g.ans = null; g.live.timer = null; } break;
       case 'correct':
         if (g.phase === 'answering' && g.players[g.ans]) {
           pushUndo(g);
@@ -260,28 +306,32 @@ io.on('connection', s => {
           g.ans = null;
           g.phase = 'locked';
           g.done = true;
-          io.to('H' + g.code).emit('sfx', 'giusto');
+          g.live.timer = null;
+          io.to('H' + g.code).emit('sfx', { id: rid(8), roundId: g.live.roundId, name: 'giusto' });
         }
         break;
       case 'wrong':
         if (g.phase === 'answering' && g.ans) {
           pushUndo(g);
+          g.live.timer = null;
           g.answered.add(g.ans);
           const next = g.order.find(o => !g.answered.has(o.id) && o.id !== g.ans && g.players[o.id]?.sid);
           if (next) {
             g.ans = next.id;
             g.phase = 'answering';
-            io.to('H' + g.code).emit('buzz');
+            io.to('H' + g.code).emit('buzz', { id: rid(8), roundId: g.live.roundId });
           } else {
             g.ans = null;
             after(g);
           }
-          io.to('H' + g.code).emit('sfx', 'sbagliato');
+          io.to('H' + g.code).emit('sfx', { id: rid(8), roundId: g.live.roundId, name: 'sbagliato' });
         }
         break;
       case 'undo':
         if (g.undo && g.undo.length) {
           const snap = g.undo.pop();
+          if (snap.roundId !== g.live.roundId) break;
+          g.live.timer = null;
           g.phase = snap.phase;
           g.ans = snap.ans;
           g.answered = new Set(snap.answered);
@@ -292,7 +342,7 @@ io.on('connection', s => {
           }
         }
         break;
-      case 'newround': g.phase = 'locked'; g.ans = null; g.answered.clear(); g.order = []; g.done = false; break;
+      case 'newround': g.live.paused = false; liveGame.clearRound(g); break;
       case 'pts':
         if (P) {
           pushUndo(g);
@@ -312,8 +362,12 @@ io.on('connection', s => {
         Object.values(g.players).forEach(p => p.score = 0);
         break;
       case 'end': {
+        g.ending = true; g.phase = 'locked'; g.live.paused = false;
+        g.live.countdown = null; g.live.timer = null; g.live.applause = null;
         const sorted = Object.values(g.players).filter(x => x.st === 'ok').sort((a, b) => b.score - a.score);
         const final = sorted.map((p, i) => ({ rank: i + 1, nick: p.nick, score: p.score, avatar: p.avatar }));
+        g.final = final;
+        sync(g);
         io.to('P' + g.code).emit('final', final);
         io.to('H' + g.code).emit('final', final);
         setTimeout(() => {
@@ -334,9 +388,16 @@ io.on('connection', s => {
     if (!checkRate(ip, 'join', 15, 60000)) return cb({ err: 'Troppi tentativi, riprova tra un minuto' });
     const g = games[String(d.code || '').toUpperCase()];
     if (!g) return cb({ err: 'Codice partita non trovato' });
+    if (g.ending) return cb({ err: 'La partita è terminata' });
     if (g.banned.some(b => b.id === d.pid)) return cb({ err: 'Sei stato bannato da questa partita' });
     let p = d.pid && g.players[d.pid];
-    if (p && p.token === d.token) { p.sid = s.id; }
+    if (p && p.token !== d.token) return cb({ err: 'Credenziali non valide: chiedi all’host di liberare il posto' });
+    if (p && p.token === d.token) {
+      if (p.sid && p.sid !== s.id) {
+        const old = io.sockets.sockets.get(p.sid);
+        if (old) { old.leave('P' + g.code); old.data = {}; old.emit('session:replaced'); }
+      }
+    }
     else {
       // Idempotenza per stesso socket
       if (!p) {
@@ -371,32 +432,91 @@ io.on('connection', s => {
         g.players[p.id] = p;
       }
     }
+    leaveIdentity();
+    p.sid = s.id;
     s.data = { code: g.code, pid: p.id }; s.join('P' + g.code);
     cb({ code: g.code, pid: p.id, token: p.token, hist: g.chat }); sync(g);
   });
 
-  // Coda reale di prenotazione (T-08)
-  s.on('buzz', () => {
-    const g = games[s.data.code], p = g && g.players[s.data.pid];
-    if (!p || p.st !== 'ok' || !p.sid || g.phase === 'locked' || g.answered.has(p.id)) return;
-    if (g.order.some(o => o.id === p.id)) return;
-    g.order.push({ id: p.id, t: Date.now() });
-    if (!g.ans) {
-      g.phase = 'answering';
-      g.ans = p.id;
-      io.to('H' + g.code).emit('buzz');
-    }
-    sync(g);
+  // A press is acknowledged independently of the host sound. Server order never waits on effects.
+  s.on('buzz', (d, cb) => {
+    if (typeof d === 'function') { cb = d; d = {}; }
+    request('buzz', d, cb, input => {
+      const { g, p } = playerIdentity();
+      if (!g || !p) return liveGame.fail('Non sei connesso alla stanza');
+      if (liveGame.advance(g)) sync(g);
+      if (input.roundId && input.roundId !== g.live.roundId) return liveGame.fail('Questa manche è terminata');
+      if (!g.started || g.ending || g.live.paused || g.live.countdown || g.phase === 'locked' || (g.live.applause && !g.live.applause.closed)) return liveGame.fail(g.live.paused ? 'Partita in pausa' : 'Le prenotazioni sono chiuse');
+      if (!liveGame.eligible(g, p)) return liveGame.fail('In questo duello sei spettatore');
+      if (g.answered.has(p.id) || g.order.some(o => o.id === p.id)) return liveGame.fail('Hai già prenotato in questa manche');
+      const eventId = rid(8);
+      g.order.push({ id: p.id, t: Date.now(), eventId });
+      if (!g.ans) {
+        g.phase = 'answering'; g.ans = p.id;
+        io.to('H' + g.code).emit('buzz', { id: eventId, roundId: g.live.roundId });
+      }
+      sync(g);
+      return liveGame.ok({ roundId: g.live.roundId, position: g.order.length, eventId });
+    });
   });
+
+  s.on('live:act', (d, cb) => request('live:act', d, cb, input => {
+    const g = G(); if (!g) return liveGame.fail('Comando riservato all’host');
+    if (liveGame.advance(g)) sync(g);
+    if (!checkRate(s.id, 'live', 30, 1000)) return liveGame.fail('Troppi comandi, attendi un momento');
+    const result = liveGame.action(g, input); if (result.ok) sync(g); return result;
+  }));
+
+  s.on('host:effect', (d, cb) => request('host:effect', d, cb, input => {
+    const g = G(); if (!g || g.ending) return liveGame.fail('Comando riservato all’host');
+    const p = g.players[input.pid];
+    if (!p || p.st !== 'ok' || !p.sid) return liveGame.fail('Il destinatario non è connesso');
+    if (!['reaction', 'sound', 'message', 'presence'].includes(input.kind)) return liveGame.fail('Effetto non valido');
+    if (input.kind === 'reaction' && !liveGame.REACTIONS.includes(input.value)) return liveGame.fail('Reazione non valida');
+    if (input.kind === 'sound' && !liveGame.SOUNDS.includes(input.value)) return liveGame.fail('Suono non valido');
+    if (input.kind === 'message' && !liveGame.MESSAGES.includes(input.value)) return liveGame.fail('Messaggio non valido');
+    const now = Date.now();
+    if (p.effectAfter > now || (input.kind === 'sound' && p.soundAfter > now)) return liveGame.fail('Attendi prima di inviare un altro effetto a questa squadra');
+    if (!checkRate(g.code, 'effect', 12, 5000)) return liveGame.fail('Troppi effetti nella stanza, attendi');
+    const effect = { id: rid(8), roundId: g.live.roundId, kind: input.kind, value: input.kind === 'presence' ? 'Ci sei?' : input.value, expiresAt: now + (input.kind === 'presence' ? 15000 : 4000), pid: p.id };
+    p.effectAfter = now + 700;
+    if (input.kind === 'sound') p.soundAfter = now + 3000;
+    if (input.kind === 'presence') { p.presence = { id: effect.id, expiresAt: effect.expiresAt }; sync(g); }
+    io.to(p.sid).emit('effect', effect);
+    return liveGame.ok({ id: effect.id });
+  }));
+
+  s.on('presence:reply', (d, cb) => request('presence:reply', d, cb, input => {
+    const { g, p } = playerIdentity();
+    if (!p || !p.presence || p.presence.id !== input.id || p.presence.expiresAt < Date.now()) return liveGame.fail('Richiesta di presenza scaduta');
+    const confirmation = { id: input.id, pid: p.id, nick: p.nick };
+    p.presence = null; sync(g);
+    // TV clients must not receive these private confirmations.
+    for (const socket of io.sockets.sockets.values()) if (socket.data.host && socket.data.code === g.code) socket.emit('presence:confirmed', confirmation);
+    return liveGame.ok();
+  }));
+
+  s.on('applause:react', (d, cb) => request('applause:react', d, cb, input => {
+    const { g, p } = playerIdentity();
+    if (!p) return liveGame.fail('Non sei connesso alla stanza');
+    if (liveGame.advance(g)) sync(g);
+    const a = g.live.applause;
+    if (g.live.paused || !a || a.closed || a.id !== input.id) return liveGame.fail('L’applausometro è chiuso');
+    if (!liveGame.REACTIONS.includes(input.value)) return liveGame.fail('Reazione non valida');
+    const now = Date.now();
+    if (p.applauseAfter > now) return liveGame.fail('Un applauso alla volta');
+    p.applauseAfter = now + 650;
+    a.counts[input.value]++; sync(g); return liveGame.ok();
+  }));
 
   // chat: giocatori e host
   s.on('chat', m => {
     const now = Date.now();
     if (s.data._lastChat && now - s.data._lastChat < 1000) return;
     s.data._lastChat = now;
-    const g = games[s.data.code]; if (!g || !m || !g.set.chat) return;
+    const g = games[s.data.code]; if (!g || !m || !g.set.chat || g.ending) return;
     let id = 'host', nick = 'Host';
-    if (!s.data.host) { const p = g.players[s.data.pid]; if (!p || p.st !== 'ok') return; id = p.id; nick = p.nick; }
+    if (!s.data.host) { const p = g.players[s.data.pid]; if (!p || p.st !== 'ok' || p.sid !== s.id) return; id = p.id; nick = p.nick; }
     const out = { id, nick, text: String(m.text || '').slice(0, 200), anim: getStickers().includes(m.anim) ? m.anim : null };
     if (!out.text && !out.anim) return;
     g.chat.push(out); if (g.chat.length > 40) g.chat.shift();
@@ -408,6 +528,10 @@ io.on('connection', s => {
     if (p && p.sid === s.id) { p.sid = null; sync(g); }
   });
 });
+
+setInterval(() => {
+  for (const g of Object.values(games)) if (liveGame.advance(g)) sync(g);
+}, 50).unref();
 
 // pulizia partite abbandonate (12 ore)
 setInterval(() => { for (const c in games) if (Date.now() - games[c].last > 432e5) delete games[c]; }, 18e5);

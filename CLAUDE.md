@@ -36,11 +36,13 @@
    - [x] **T-28 · Wake lock anche per l'host e QR con `localhost`.** Risolto in `public/host.html`: `wakeLock` attivo anche per lo schermo dell'host; banner di avviso quando l'host è aperto su `localhost` per ricordare di usare l'IP locale per i telefoni. [Completato]
    - [x] **T-29 · Pulizia repository, documentazione e test.** Risolto: `.DS_Store` e `__MACOSX` aggiunti a `.gitignore` e rimossi dal repo; permessi di `buzzer.mp3` normalizzati a 644; `README.md` aggiornato con documentazione completa; suite di test automatici in `test/test.js` configurata in `package.json` ed eseguibile con `npm test`. [Completato]
 
+   - [x] **T-26 · Animazioni di sfondo e batteria.** Sfondi a cerchi discreti con livelli spenti/leggeri/completi, alternativa statica, preferenze di movimento/concentrazione e pausa a scheda nascosta. [Completato 06/11/2026]
+   - [x] **T-31 · Regia, audio personale e accessibilità.** Impostazioni persistenti per tema, contrasto, testo, effetti e audio; suono locale del buzz distinto dall’host e conferma server; menu privato per squadra con reazioni, suoni, messaggi e presenza; spotlight pubblico. Countdown, duello, estrazione, timer 10/20/30, applausometro e pausa governati dal server con ACK, limiti e round ID. 27 PNG Icons8 locali con attribuzione. Test realtime e browser reale senza nuove dipendenze. Dettagli in README e docs/. [Completato 06/11/2026; Sicurezza: 95% sui controlli automatici, hardware mobile da provare]
+
 3) Mansioni da svolgere:
-   - [ ] **T-23 · Punti personalizzati e timer.** Campo punti libero, timer di risposta configurabile con countdown visibile a tutti. Sicurezza: 70% sull'utilità.
+   - [ ] **T-23 · Punti personalizzati.** Eventuale estensione del campo punti oltre i limiti attuali. Il timer configurabile e condiviso è completato (vedi T-31).
    - [ ] **T-25 · Font di Google via `@import`.** Self-hosting dei woff2 con `font-display:swap` e `preload`. Sicurezza: 90%.
-   - [ ] **T-26 · Animazioni di sfondo e batteria.** Opzione "Risparmio batteria/effetti ridotti" e pausa animazioni a tab nascosta. Sicurezza: 60%.
-   - [ ] **T-30 · Funzioni opzionali.** Storico delle manche, suono buzzer opzionale sui telefoni, temi personalizzati. Sicurezza: 60%.
+   - [ ] **T-30 · Storico delle manche.** Suono locale dei telefoni e temi personali completati (vedi T-31).
 
 # REGOLE DI COMPORTAMENTO (DA SEGUIRE SEMPRE)
 

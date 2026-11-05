@@ -1,3 +1,6 @@
 node_modules
 .DS_Store
 __MACOSX
+
+# Local browser and design verification artifacts
+.taste-skill/*/

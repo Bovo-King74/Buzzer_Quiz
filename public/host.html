@@ -15,6 +15,10 @@
 .lh-warn { background: var(--magenta); color: #fff; padding: 10px; font-weight: 700; margin-bottom: 10px; border: 3px solid var(--nero); }
 </style>
 <link rel="stylesheet" href="/refresh.css?v=clean-20261104">
+<link rel="stylesheet" href="/experience.css?v=20261105">
+<link rel="stylesheet" href="/live-ui.css?v=20261105">
+<script src="/experience.js?v=20261105"></script>
+<script src="/live-ui.js?v=20261105"></script>
 </head>
 <body>
 <div id="net" role="alert" hidden>Connessione persa… riconnessione</div>
@@ -133,8 +137,8 @@ const s = io(), $ = q => document.querySelector(q);
 const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let prevPhase = null, prevAns = null;
 let lastSqHash = '', lastOrderHash = '', lastAcHash = '';
-let cred = JSON.parse(localStorage.hostGame || 'null'), INFO = null, ST = null, pick = null, keyShown = false;
-const act = (type, x = {}) => s.emit('act', { type, ...x });
+let cred = (() => { try { return JSON.parse(localStorage.hostGame || 'null'); } catch { return null; } })(), INFO = null, ST = null, pick = null, keyShown = false;
+const act = (type, x = {}) => { if (s.connected) s.emit('act', { type, ...x }); };
 $('#lhost').textContent = $('#hostlink').textContent = location.host;
 $('#hostlink').textContent = location.host + '/host.html#collega';
 
@@ -197,7 +201,7 @@ const row = (p, S, i) => `
     <span class="rk">${i + 1}</span><img class="av" src="${p.avatar}" alt="">
     <span class="nm">${esc(p.nick)}<small>${p.on ? (S.answered.includes(p.id) ? 'Ha già risposto' : 'Connesso') : 'Disconnesso'}</small></span>
     <span class="sc">${p.score}</span>
-    <div class="az"><button data-a="pts" data-v="-1">−1</button><button data-a="pts" data-v="1">+1</button><button data-a="kick">Espelli</button><button class="no" data-a="ban">Banna</button></div>
+    <div class="az"><button data-a="pts" data-v="-1" aria-label="Togli un punto a ${esc(p.nick)}">−1</button><button data-a="pts" data-v="1" aria-label="Assegna un punto a ${esc(p.nick)}">+1</button><button data-player-action="${p.id}" aria-label="Azioni per ${esc(p.nick)}" aria-haspopup="dialog">${BuzzerUX.icon('more')} Azioni</button></div>
   </div>`;
 const plural = n => n + (n === 1 ? ' gruppo' : ' gruppi');
 
@@ -269,6 +273,8 @@ $('#sPts').onchange = e => act('set', { key: 'pts', v: e.target.value });
 $('#key').onclick = e => { keyShown = !keyShown; e.target.textContent = keyShown ? INFO.key : 'Mostra'; };
 $('#qr').onclick = $('#lqr').onclick = () => $('#big').hidden = false; $('#big').onclick = () => $('#big').hidden = true;
 const manage = e => {
+  const action = e.target.closest('[data-player-action]');
+  if (action) { BuzzerLive.openParticipant(action.dataset.playerAction); return; }
   const b = e.target.closest('button[data-a]'); if (!b) return;
   const id = b.closest('[data-id]').dataset.id, a = b.dataset.a;
   if (a === 'ban' && !confirm('Bannare questo gruppo?')) return;
@@ -288,7 +294,7 @@ $('#tabs').onclick = e => {
 
 // T-22: Scorciatoie host case-insensitive con supporto Z per Annulla
 document.addEventListener('keydown', e => {
-  if (!ST || !ST.started || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  if (!ST || !ST.started || document.querySelector('dialog[open]') || /INPUT|SELECT|TEXTAREA|BUTTON|A/.test(e.target.tagName) || e.ctrlKey || e.metaKey || e.altKey || ST.live?.paused || ST.live?.countdown || ST.live?.applause && !ST.live.applause.closed) return;
   const key = e.key.toLowerCase();
   if (e.code === 'Space') { e.preventDefault(); act(ST.phase === 'locked' ? 'open' : 'lock'); }
   else if (key === 'g') act('correct');
@@ -309,38 +315,7 @@ const send = () => { const t = $('#ct').value.trim(); if (!t && !pick) return; o
 $('#cs').onclick = send;
 $('#ct').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); send(); } };
 
-/* ---------- suoni (T-27: AudioContext riutilizzato) ---------- */
-let SND = {};
-const loadSounds = () => fetch('/api/sounds').then(r => r.json()).then(m => {
-  SND = {}; for (const k in m) { const a = new Audio(m[k]); a.preload = 'auto'; SND[k] = a; }
-}).catch(() => {});
-loadSounds();
-
-let audioCtx = null;
-function getAudioCtx() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  return audioCtx;
-}
-
-function beep(seq) {
-  try {
-    const c = getAudioCtx(); let t = c.currentTime;
-    for (const [f, d, type] of seq) {
-      const o = c.createOscillator(), g = c.createGain();
-      o.type = type; o.frequency.value = f; g.gain.value = .2;
-      o.connect(g); g.connect(c.destination);
-      o.start(t); o.stop(t + d); t += d;
-    }
-  } catch {}
-}
-const FALLBACK = { buzzer: [[880, .18, 'square']], giusto: [[660, .12, 'triangle'], [990, .22, 'triangle']], sbagliato: [[220, .35, 'sawtooth']] };
-function play(k) {
-  const a = SND[k]; if (!a) return beep(FALLBACK[k]);
-  try { a.currentTime = 0; const r = a.play(); if (r && r.catch) r.catch(() => beep(FALLBACK[k])); } catch { beep(FALLBACK[k]); }
-}
-s.on('buzz', () => play('buzzer'));
-s.on('sfx', k => play(k));
+BuzzerLive.attach(s, 'host');
 </script>
 </body>
 </html>
