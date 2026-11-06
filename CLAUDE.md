@@ -39,7 +39,10 @@
    - [x] **T-26 · Animazioni di sfondo e batteria.** Sfondi a cerchi discreti con livelli spenti/leggeri/completi, alternativa statica, preferenze di movimento/concentrazione e pausa a scheda nascosta. [Completato 06/11/2026]
    - [x] **T-31 · Regia, audio personale e accessibilità.** Impostazioni persistenti per tema, contrasto, testo, effetti e audio; suono locale del buzz distinto dall’host e conferma server; menu privato per squadra con reazioni, suoni, messaggi e presenza; spotlight pubblico. Countdown, duello, estrazione, timer 10/20/30, applausometro e pausa governati dal server con ACK, limiti e round ID. 27 PNG Icons8 locali con attribuzione. Test realtime e browser reale senza nuove dipendenze. Dettagli in README e docs/. [Completato 06/11/2026; Sicurezza: 95% sui controlli automatici, hardware mobile da provare]
 
+   - [x] **T-32 · Audit di utilizzo e di efficienza.** Revisione Chrome con host, partecipanti e TV separati; tutte le preferenze, modalità e azioni principali, moderazione, chat e cinque round Afterparty. 101/103 controlli preferenze, riproduzioni dei difetti di coda, finale, riconnessione TV e input server. Nessuna correzione applicativa; rapporto e matrice in `docs/AUDIT.md`. [Completato 06/11/2026; Sicurezza: 95% sui difetti riprodotti]
+
 3) Mansioni da svolgere:
+   - [ ] **T-33 · Correzioni emerse dall’audit.** Priorità: crash server da input non valido, Blocca/Apri e coda, Impostazioni sopra Invio chat; seguono riconnessione TV, undo con espulsioni, finale, accessibilità ed efficienza. Vedi `docs/AUDIT.md`.
    - [ ] **T-23 · Punti personalizzati.** Eventuale estensione del campo punti oltre i limiti attuali. Il timer configurabile e condiviso è completato (vedi T-31).
    - [ ] **T-25 · Font di Google via `@import`.** Self-hosting dei woff2 con `font-display:swap` e `preload`. Sicurezza: 90%.
    - [ ] **T-30 · Storico delle manche.** Suono locale dei telefoni e temi personali completati (vedi T-31).
