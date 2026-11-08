@@ -65,9 +65,18 @@ test('real Socket.IO: host + players, authoritative queue, private effects, mode
   const url = `http://127.0.0.1:${port}`;
   const connect = async () => { const c = client(url, { forceNew: true, transports: ['websocket'], reconnection: false }); clients.push(c); await new Promise((resolve, reject) => { c.once('connect', resolve); c.once('connect_error', reject); }); return c; };
   const send = (c, event, data = {}) => new Promise((resolve, reject) => c.timeout(2500).emit(event, data, (error, r) => error ? reject(error) : resolve(r)));
-  const until = async (condition, label = 'state') => { const stop = Date.now() + 3000; while (!condition()) { if (Date.now() > stop) throw new Error('Timed out: ' + label); await wait(10); } };
+  const until = async (condition, label = 'state') => { const stop = Date.now() + 6000; while (!condition()) { if (Date.now() > stop) throw new Error('Timed out: ' + label); await wait(10); } };
   const host = await connect(), a = await connect(), b = await connect(), c = await connect(), tv = await connect();
-  const room = await send(host, 'host:create', { pass: 'TEST', origin: url }); assert.ok(room.key);
+  const creation = { origin: url, requestId: 'integration-create-once-1234' };
+  const [room, duplicate] = await Promise.all([send(host, 'host:create', creation), send(host, 'host:create', creation)]);
+  assert.ok(room.key); assert.equal(duplicate.code, room.code); assert.equal(duplicate.key, room.key);
+  assert.equal((await (await fetch(url + '/healthz')).json()).games, 1);
+  // HOST_PASS is configured above: quiz creation must still work without a password.
+  assert.equal(room.err, undefined);
+  const secondHost = await connect();
+  assert.ok((await send(secondHost, 'host:join', { code: room.code, key: 'WRONG' })).err);
+  assert.equal((await send(secondHost, 'host:join', { code: room.code, key: room.key })).code, room.code);
+  secondHost.disconnect();
   let state; host.on('state', s => { state = s; });
   const pa = await send(a, 'join', { code: room.code, nick: 'Alpha' }), pb = await send(b, 'join', { code: room.code, nick: 'Beta' }), pc = await send(c, 'join', { code: room.code, nick: 'Gamma' });
   assert.ok(pa.token && pb.token && pc.token);

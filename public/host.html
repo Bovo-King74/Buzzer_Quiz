@@ -19,18 +19,24 @@
 <link rel="stylesheet" href="/live-ui.css?v=20261105">
 <script src="/experience.js?v=20261105"></script>
 <script src="/live-ui.js?v=20261105"></script>
+<link rel="stylesheet" href="/profile.css?v=20261106">
+<link rel="stylesheet" href="/app-shell.css?v=20261106">
+<link rel="stylesheet" href="/visuals.css?v=20261106">
+<script src="/profile.js?v=20261106"></script>
+<script src="/app-shell.js?v=20261106"></script>
+<script src="/visuals.js?v=20261106" defer></script>
 </head>
-<body>
+<body data-view="host-setup">
 <div id="net" role="alert" hidden>Connessione persa… riconnessione</div>
 
-<!-- Accesso host: parola chiave per creare una stanza, oppure codice+chiave per collegarsi a una esistente -->
+<!-- Crea una stanza direttamente, oppure usa codice+chiave per collegarti a una esistente. -->
 <section id="setup" class="setup" hidden>
   <a class="hostbtn" href="/player.html">Entra come giocatore</a>
-  <div class="brand">Buzzer<span>Regia della serata</span></div><h1>Si va in scena.</h1><p class="intro">Crea la stanza, invita le squadre e guida la partita.</p>
+  <a class="join-back" href="/player.html">← Menu iniziale</a><div class="brand">Buzzer<span>Regia della serata</span></div><h1>Si va in scena.</h1><p class="intro">Crea la stanza, invita le squadre e guida la partita.</p>
   <div class="row2">
     <form class="blk" id="mkf" autocomplete="off">
       <h2>Crea una nuova stanza</h2>
-      <input id="pw" type="password" placeholder="Parola chiave" aria-label="Parola chiave" autocapitalize="characters" autocomplete="off">
+      <p>Il codice per invitare le squadre viene generato alla creazione.</p>
       <button class="ok" id="mk" type="submit">Crea stanza</button>
       <small id="merr" class="err"></small>
     </form>
@@ -156,7 +162,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 /* ---------- la stanza nasce all'apertura della pagina ---------- */
 function enter(r) {
   INFO = r; cred = { code: r.code, key: r.key }; localStorage.hostGame = JSON.stringify(cred);
-  $('#setup').hidden = true; $('#app').hidden = false;
+  $('#setup').hidden = true; $('#app').hidden = false; BuzzerShell.hostEntered();
   for (const id of ['#code', '#lcode', '#bcode']) $(id).textContent = r.code;
   for (const id of ['#qr', '#lqr', '#bqr']) $(id).src = r.qr;
   $('#url').textContent = r.url; $('#log').innerHTML = ''; r.hist.forEach(addMsg);
@@ -164,7 +170,7 @@ function enter(r) {
     $('#stk').innerHTML = l.map(f => `<img src="assets/anim/${encodeURIComponent(f)}" data-f="${esc(f)}" alt="">`).join('');
   });
 }
-const gate = () => { $('#setup').hidden = false; $('#app').hidden = true; };
+const gate = () => { $('#setup').hidden = false; $('#app').hidden = true; BuzzerShell.hostSetup(); };
 function join(c, k, manual) {
   s.emit('host:join', { code: c, key: k, origin: location.origin }, r => {
     if (!r.err) return enter(r);
@@ -178,11 +184,8 @@ s.on('disconnect', net); s.on('connect_error', net);
 s.on('connect', () => { net(); if (cred) join(cred.code, cred.key, false); else gate(); });
 
 $('#mkf').onsubmit = e => {
-  e.preventDefault(); $('#merr').textContent = '';
-  s.emit('host:create', { origin: location.origin, pass: $('#pw').value }, r => {
-    if (r.err) { $('#merr').textContent = r.err; $('#pw').select(); return; }
-    $('#pw').value = ''; enter(r);
-  });
+  e.preventDefault();
+  BuzzerShell.createRoom(s, $('#mk'), $('#merr'), enter);
 };
 $('#jnf').onsubmit = e => { e.preventDefault(); join($('#jc').value.trim().toUpperCase(), $('#jk').value.trim().toUpperCase(), true); };
 s.on('ended', () => { localStorage.removeItem('hostGame'); location.hash = ''; location.reload(); });

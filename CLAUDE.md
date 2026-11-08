@@ -41,6 +41,10 @@
 
    - [x] **T-32 · Audit di utilizzo e di efficienza.** Revisione Chrome con host, partecipanti e TV separati; tutte le preferenze, modalità e azioni principali, moderazione, chat e cinque round Afterparty. 101/103 controlli preferenze, riproduzioni dei difetti di coda, finale, riconnessione TV e input server. Nessuna correzione applicativa; rapporto e matrice in `docs/AUDIT.md`. [Completato 06/11/2026; Sicurezza: 95% sui difetti riprodotti]
 
+   - [x] **T-34 · Creazione stanza quiz senza password.** Rimosso campo e controllo password da host:create; aggiornati link, documentazione e test. Conservati limiti di creazione e chiave host per stanze esistenti. HOST_PASS riguarda solo Afterparty. [Completato 06/11/2026]
+
+   - [x] **T-35 · Menu, profilo e personalizzazione visiva.** Menu a tre percorsi, creazione idempotente verificata dal backend, recupero regia con codice e chiave; barra condivisa con impostazioni e profilo locale separato dalla squadra; camera/galleria con ritaglio e conferma, colore buzzer con contrasto automatico. Liquid Glass JS e ShaderGradient locali, video originale dalle grafiche del progetto, animazioni confermate dal server e fallback accessibili. Misurato e risolto lo scroll interno superfluo del modulo desktop; controlli di gioco visibili/cliccabili alle tre risoluzioni richieste. Test realtime, Afterparty e Playwright; dettagli e limiti in docs/MENU-VERIFICATION.md. [Completato 06/11/2026; Sicurezza: 95% sui controlli eseguiti]
+
 3) Mansioni da svolgere:
    - [ ] **T-33 · Correzioni emerse dall’audit.** Priorità: crash server da input non valido, Blocca/Apri e coda, Impostazioni sopra Invio chat; seguono riconnessione TV, undo con espulsioni, finale, accessibilità ed efficienza. Vedi `docs/AUDIT.md`.
    - [ ] **T-23 · Punti personalizzati.** Eventuale estensione del campo punti oltre i limiti attuali. Il timer configurabile e condiviso è completato (vedi T-31).

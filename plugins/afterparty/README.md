@@ -1,7 +1,7 @@
 # Afterparty: l’archivio dei bluff
 
 Plugin multiplayer originale per il dopogioco, accessibile a `/afterparty/`.
-La regia crea una stanza usando la stessa parola chiave host del quiz (`HOST_PASS`, predefinita `KJB`), poi invita da 2 a 12 squadre tramite QR o link. La regia non partecipa al voto: può mostrare il suo schermo alla compagnia.
+La regia crea una stanza usando la parola chiave Afterparty (`HOST_PASS`, predefinita `KJB`; il quiz crea invece stanze senza password), poi invita da 2 a 12 squadre tramite QR o link. La regia non partecipa al voto: può mostrare il suo schermo alla compagnia.
 
 ## Regole
 

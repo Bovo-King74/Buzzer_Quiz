@@ -100,8 +100,7 @@ try {
  // Dialogs use actual browser confirm, accepted for this isolated audit room.
  for(const p of [h,a,b,tv]) { await p.send('Page.enable'); }
  await h.goto('/host.html');await wait(h,'s.connected');
- await h.fill('#pw','WRONG');await h.click('#mk');await wait(h,'document.querySelector("#merr").textContent');checked('password errata',await h.eval('document.querySelector("#merr").textContent'));
- await h.eval('document.querySelector("#pw").value=""');await h.fill('#pw','BROWSER');await h.click('#mk');await wait(h,'ST');
+ assert.equal(await h.eval('document.querySelector("#pw")'),null);await h.click('#mk');await wait(h,'ST');checked('creazione senza password',true);
  const room=await h.eval('cred');
  await h.click('#key');checked('mostra/nascondi chiave',await h.eval('document.querySelector("#key").textContent===cred.key'));await h.click('#key');
  await h.click('#sJoin');await wait(h,'!ST.set.joinOpen');

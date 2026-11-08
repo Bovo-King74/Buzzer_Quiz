@@ -98,7 +98,13 @@ try{
   browser=await CDP.launch();
   const host=await browser.page(1440,900),a=await browser.page(),b=await browser.page(),tv=await browser.page(1280,800);
   await host.goto('/host.html');await wait(host,'s.connected && !document.querySelector("#setup").hidden');
-  await host.fill('#pw',process.env.BROWSER_TEST_PASSWORD||'BROWSER');await host.click('#mk');
+  assert.equal(await host.eval('document.querySelector("#pw")'),null);
+  await host.shot('host-create-desktop');
+  await host.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  assert.ok(await host.eval('document.documentElement.scrollWidth<=innerWidth+1'));
+  await host.shot('host-create-mobile');
+  await host.send('Emulation.setDeviceMetricsOverride',{width:1440,height:900,deviceScaleFactor:1,mobile:false});
+  await host.click('#mk');
   await wait(host,'typeof ST !== "undefined" && ST && !document.querySelector("#app").hidden');
   const room=await host.eval('cred');
   for(const [p,nick] of [[a,'Le Volpi'],[b,'I Fulmini']]){

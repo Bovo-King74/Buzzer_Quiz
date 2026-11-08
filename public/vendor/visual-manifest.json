@@ -1,0 +1,23 @@
+{
+  "libraries": {
+    "@react-three/fiber": "9.8.2",
+    "@shadergradient/react": "2.4.20",
+    "camera-controls": "2.9.0",
+    "its-fine": "2.1.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-use-measure": "2.1.7",
+    "scheduler": "0.28.0",
+    "suspend-react": "0.1.3",
+    "three": "0.169.0",
+    "three-stdlib": "2.36.1",
+    "use-sync-external-store": "1.7.0",
+    "zustand": "5.1.0"
+  },
+  "liquidGlass": {
+    "repository": "https://github.com/dashersw/liquid-glass-js",
+    "commit": "78cb6ccb0b9987bb60a88b14ccbd13a9e6e8ab2a"
+  },
+  "shaderBundleSHA256": "fca052774c20e7dfbc5db0cd695275cd8c48542cbe67371a50f0c51bf54d4da7",
+  "renderer": "isolated React island; native app unchanged"
+}

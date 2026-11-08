@@ -1,0 +1,15 @@
+{
+  "repository": "https://github.com/dashersw/liquid-glass-js",
+  "commit": "78cb6ccb0b9987bb60a88b14ccbd13a9e6e8ab2a",
+  "license": "MIT",
+  "filesSHA256": {
+    "container.js": "7080217b7fb7e422d2b1f4043342d34fddafaed0a91b54d3f9105361c0f70d65",
+    "button.js": "e8dbc8e96f4f8f0c64da4184e9b341776d8adedd42d788b92f9ad7049a9306e6",
+    "glass.css": "99dc2ee94be1e5d76402b3acdb3fe807332f533ef5be71721d5ed022b98fc813",
+    "LICENSE": "dad3b23e40449578219bc1acced12c89bdacd78c2da018f3d1803b469038fecf",
+    "README.md": "a811bf1d1a1e24b72e3ddc7b4af62c131c6e03c5335e0dc9c4e82334d5e4499d"
+  },
+  "upstreamFilesUnmodified": true,
+  "skillFilesFound": [],
+  "bridge": "bridge.js is the local Buzzer namespace bridge, not an upstream file"
+}

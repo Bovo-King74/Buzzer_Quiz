@@ -82,7 +82,7 @@ app.get('/api/sounds', (q, r) => {
   r.set('Cache-Control', 'no-store').json(o);
 });
 
-// Parola chiave per creare una stanza
+// Password used only by the separate Afterparty plugin; quiz creation is public.
 let HOST_PASS;
 if (process.env.HOST_PASS) {
   HOST_PASS = String(process.env.HOST_PASS).toUpperCase();
@@ -90,15 +90,7 @@ if (process.env.HOST_PASS) {
   HOST_PASS = 'KJB';
 }
 
-const fails = {};
 const ipOf = s => s.handshake.address;
-const passCheck = (s, v) => {
-  const f = fails[ipOf(s)] || (fails[ipOf(s)] = { n: 0, until: 0 });
-  if (Date.now() < f.until) return 'wait';
-  if (String(v || '').trim().toUpperCase() === HOST_PASS) { f.n = 0; return 'ok'; }
-  if (++f.n >= 5) { f.n = 0; f.until = Date.now() + 6e4; }
-  return 'no';
-};
 
 // Rate limiter generico per IP
 const rateLimit = {};
@@ -126,6 +118,8 @@ const letterAvatar = nick => {
 const IMG_URI = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/]+=*$/;
 
 const games = Object.create(null);
+// Retry tokens ensure a double tap or reconnect creates a single room.
+const creationRequests = new Map();
 const rid = n => crypto.randomBytes(n).toString('hex');
 const mkCode = () => { let c; do c = Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ'[crypto.randomInt(24)]).join(''); while (games[c]); return c; };
 
@@ -210,7 +204,7 @@ function drop(g, id, ban) {
     g.live.timer = null;
     if (next) {
       g.ans = next.id; g.phase = 'answering';
-      io.to('H' + g.code).emit('buzz', { id: rid(8), roundId: g.live.roundId });
+      io.to('H' + g.code).emit('buzz', { id: rid(8), roundId: g.live.roundId, pid: g.ans });
     } else { g.ans = null; after(g); }
   }
 }
@@ -252,12 +246,20 @@ io.on('connection', s => {
   s.on('host:create', async (d, cb) => {
     if (typeof cb !== 'function') return;
     const ip = ipOf(s);
+    const requestId = typeof d?.requestId === 'string' && /^[A-Za-z0-9_-]{16,100}$/.test(d.requestId) ? d.requestId : null;
+    const requestKey = requestId && `${ip}:${requestId}`;
+    const previous = requestKey && creationRequests.get(requestKey);
+    const existing = previous && Date.now() - previous.at < 600000 && games[previous.code];
+    if (existing) {
+      leaveIdentity();
+      s.data = { host: true, code: existing.code }; s.join('H' + existing.code);
+      cb(await info(existing, d?.origin)); sync(existing); return;
+    }
     if (!checkRate(ip, 'host:create', 5, 60000)) return cb({ err: 'Troppe stanze create, riprova tra un minuto' });
-    const pc = passCheck(s, d && d.pass);
-    if (pc !== 'ok') return cb({ err: pc === 'wait' ? 'Troppi tentativi, riprova tra un minuto' : 'Parola chiave errata' });
     const roomCount = Object.values(games).filter(g => g.creatorIp === ip).length;
     if (roomCount >= 3) return cb({ err: 'Troppe stanze create. Chiudi una stanza prima di crearne una nuova.' });
     const g = newGame(ip); games[g.code] = g;
+    if (requestKey) creationRequests.set(requestKey, { code: g.code, at: Date.now() });
     leaveIdentity();
     s.data = { host: true, code: g.code }; s.join('H' + g.code);
     cb(await info(g, d && d.origin)); sync(g);
@@ -319,7 +321,7 @@ io.on('connection', s => {
           if (next) {
             g.ans = next.id;
             g.phase = 'answering';
-            io.to('H' + g.code).emit('buzz', { id: rid(8), roundId: g.live.roundId });
+            io.to('H' + g.code).emit('buzz', { id: rid(8), roundId: g.live.roundId, pid: g.ans });
           } else {
             g.ans = null;
             after(g);
@@ -451,9 +453,10 @@ io.on('connection', s => {
       if (g.answered.has(p.id) || g.order.some(o => o.id === p.id)) return liveGame.fail('Hai già prenotato in questa manche');
       const eventId = rid(8);
       g.order.push({ id: p.id, t: Date.now(), eventId });
+      io.to('H' + g.code).emit('reservation', { id: eventId, roundId: g.live.roundId, pid: p.id });
       if (!g.ans) {
         g.phase = 'answering'; g.ans = p.id;
-        io.to('H' + g.code).emit('buzz', { id: eventId, roundId: g.live.roundId });
+        io.to('H' + g.code).emit('buzz', { id: eventId, roundId: g.live.roundId, pid: g.ans });
       }
       sync(g);
       return liveGame.ok({ roundId: g.live.roundId, position: g.order.length, eventId });
@@ -536,10 +539,10 @@ setInterval(() => {
 // pulizia partite abbandonate (12 ore)
 setInterval(() => { for (const c in games) if (Date.now() - games[c].last > 432e5) delete games[c]; }, 18e5);
 
-// pulizia mappe fails e rateLimit (ogni 10 minuti)
+// pulizia rateLimit (ogni 10 minuti)
 setInterval(() => {
   const now = Date.now();
-  for (const k in fails) if (now > fails[k].until + 120000) delete fails[k];
+  for (const [key, request] of creationRequests) if (now - request.at > 600000 || !games[request.code]) creationRequests.delete(key);
   for (const k in rateLimit) if (now - rateLimit[k].start > 120000) delete rateLimit[k];
 }, 600000);
 

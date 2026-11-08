@@ -1,0 +1,26 @@
+/* Library renderers are decorative layers; native controls own focus, input and layout. */
+body{isolation:isolate}
+.buzzer-shader-stage{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none!important;user-select:none;background:radial-gradient(ellipse at 80% 15%,#647d353d,transparent 55%),radial-gradient(ellipse at 10% 100%,#d4e98a20,transparent 65%);opacity:.55;contain:strict}
+.buzzer-shader-stage[data-visual-role=player]{opacity:.19}
+.buzzer-shader-stage[data-visual-role=host],.buzzer-shader-stage[data-visual-role=host-setup]{opacity:.12}
+.buzzer-shader-stage[data-visual-role=join]{opacity:.28}
+.buzzer-shader-stage[hidden]{display:none!important}
+.buzzer-shader-stage>div,.buzzer-shader-stage canvas{pointer-events:none!important}
+html[data-ux-theme=light] .buzzer-shader-stage{mix-blend-mode:multiply;opacity:.23}
+html[data-ux-theme=light] .buzzer-shader-stage[data-visual-role=host]{opacity:.08}
+:is([data-glass],.buzzer-glass,.ux-settings-trigger,.buzzer-profile-trigger){isolation:isolate}
+:is([data-glass],.buzzer-glass,.ux-settings-trigger,.buzzer-profile-trigger)[data-liquid-glass=active]{background:color-mix(in srgb,var(--ux-surface,#1b201b) 82%,transparent)!important;border-color:color-mix(in srgb,var(--ux-border,#64745b) 75%,transparent);box-shadow:inset 0 1px 0 #ffffff1a}
+[data-visual-position=relative]{position:relative!important;inset:auto!important}
+.buzzer-glass-layer.glass-container{position:absolute!important;inset:0!important;z-index:-1!important;display:block!important;padding:0!important;margin:0!important;width:100%!important;height:100%!important;overflow:hidden;pointer-events:none!important;border-radius:inherit!important;opacity:.45;contain:strict}
+.buzzer-glass-layer canvas{pointer-events:none!important;box-shadow:none!important;opacity:1}
+html[data-ux-theme=light] .buzzer-glass-layer{opacity:.24}
+html[data-ux-motion=reduce] .buzzer-shader-stage canvas{display:none}
+html[data-ux-focus=true] :is(.buzzer-shader-stage,.buzzer-glass-layer),html[data-ux-contrast=true] :is(.buzzer-shader-stage,.buzzer-glass-layer),html[data-ux-transparency=reduce] .buzzer-glass-layer{display:none!important}
+html[data-ux-contrast=true] :is([data-glass],.buzzer-glass,.ux-settings-trigger,.buzzer-profile-trigger),html[data-ux-transparency=reduce] :is([data-glass],.buzzer-glass,.ux-settings-trigger,.buzzer-profile-trigger){background:var(--ux-surface)!important;box-shadow:none!important}
+/* Confirmation is finite and only added after the authoritative ACK. */
+#bz.buzz-confirmed{animation:buzzer-confirmed .5s ease-out 1}
+.host-buzz-confirmed{animation:buzzer-host-confirmed .65s ease-out 1}
+@keyframes buzzer-confirmed{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--buzzer-color,#d7ec7c) 45%,transparent)}100%{box-shadow:0 0 0 18px transparent}}
+@keyframes buzzer-host-confirmed{0%{outline:3px solid #cfe97d;outline-offset:0}100%{outline:3px solid transparent;outline-offset:5px}}
+html[data-ux-focus=true] :is(#bz.buzz-confirmed,.host-buzz-confirmed),html[data-ux-motion=reduce] :is(#bz.buzz-confirmed,.host-buzz-confirmed){animation:none}
+@media(prefers-reduced-motion:reduce){.buzzer-shader-stage canvas{display:none}#bz.buzz-confirmed,.host-buzz-confirmed{animation:none}}

@@ -108,7 +108,7 @@ try{
   const started=Date.now();let healthy=false;while(Date.now()-started<6000){try{healthy=(await fetch(base+'/healthz')).ok;if(healthy)break;}catch{}await sleep(100);}if(!healthy)throw Error(logs);
   browser=await CDP.launch();
   const host=await browser.page(1440,900),p=await browser.page(),other=await browser.page();
-  await host.goto('/host.html');await wait(host,'s.connected&&!document.querySelector("#setup").hidden');await host.fill('#pw','AUDIT');await host.click('#mk');await wait(host,'ST');const room=await host.eval('cred');
+  await host.goto('/host.html');await wait(host,'s.connected&&!document.querySelector("#setup").hidden');await host.click('#mk');await wait(host,'ST');const room=await host.eval('cred');
   for(const [page,nick] of [[p,'Audit accessibile'],[other,'Seconda squadra']]){await page.goto('/player.html?c='+room.code);await wait(page,'s.connected');await page.fill('#n',nick);await page.click('#go');await wait(page,'me.id');}
   await host.click('#bStart');await wait(p,'me.mode==="locked"');await host.click('#bOpen');await wait(p,'me.mode==="open"');
   const pid=await p.eval('me.id');

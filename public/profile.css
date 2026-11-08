@@ -1,0 +1,50 @@
+/* The profile uses the shell's glass treatment and the same personal colour tokens. */
+html[data-ux-theme] .buzzer-profile-trigger,.buzzer-profile-trigger{display:inline-flex;align-items:center;justify-content:flex-start;gap:9px;min-height:48px;max-width:220px;padding:5px 10px 5px 5px;border:1px solid var(--ux-border,#a8b4a6);border-radius:999px;background:var(--ux-surface,#fffef9);color:var(--ux-ink,#192019);box-shadow:none;font:600 14px/1.2 'Bricolage Grotesque',system-ui,sans-serif;cursor:pointer}
+.buzzer-profile-avatar{display:grid;place-items:center;width:36px;height:36px;flex:none;overflow:hidden;border-radius:50%;background:var(--giallo,#e8f580);color:#192019;font:700 13px/1 system-ui,sans-serif;letter-spacing:-.03em}
+.buzzer-profile-avatar img{display:block;width:100%;height:100%;object-fit:cover;border-radius:50%}
+.buzzer-profile-name{max-width:148px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-ux-theme] .buzzer-profile-dialog,.buzzer-profile-dialog{position:fixed;inset:0;margin:auto;width:min(470px,calc(100vw - 24px));max-height:calc(100dvh - 24px);padding:0;border:1px solid var(--ux-border,#a8b4a6);border-radius:24px;color:var(--ux-ink,#192019);background:var(--ux-surface,#fffef9);font:inherit;overflow:auto;overscroll-behavior:contain;box-shadow:0 18px 64px #0004}
+.buzzer-profile-dialog::backdrop{background:#0007}
+.buzzer-profile-dialog form{position:relative;isolation:isolate;margin:0;min-width:0}
+.profile-heading{position:sticky;top:0;z-index:3;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px;background:var(--ux-surface,#fffef9);border-bottom:1px solid var(--ux-border,#a8b4a6)}
+.profile-heading h2{font:700 24px/1.15 'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-.6px;margin:0}
+.profile-heading p,.profile-explanation{font-size:14px;line-height:1.5;color:var(--ux-muted,#4b594d);margin:6px 0 0}
+html[data-ux-theme] .profile-heading button,.profile-heading button{display:grid;place-items:center;min-width:44px;min-height:44px;flex:none;padding:8px;border-radius:50%;color:var(--ux-ink,#192019);background:var(--ux-raised,#e5eadf)}
+.profile-body{padding:0 20px 12px}
+.profile-explanation{margin:14px 0 18px}
+.profile-preview{display:grid;place-items:center;width:120px;height:120px;margin:18px auto 22px;overflow:hidden;border-radius:50%;border:2px solid var(--ux-border,#a8b4a6);background:var(--giallo,#e8f580);color:#192019;font:700 36px/1 'Bricolage Grotesque',system-ui,sans-serif;isolation:isolate}
+.profile-preview :is(canvas,img){display:block;width:100%;height:100%;object-fit:cover;border-radius:50%}
+.profile-name-label{display:grid;gap:8px;font-size:15px;font-weight:600;color:var(--ux-ink,#192019)}
+html[data-ux-theme] .profile-name-label input,.profile-name-label input{width:100%;min-height:48px;font:400 16px/1.4 'Bricolage Grotesque',system-ui,sans-serif;padding:12px 14px;border:1px solid var(--ux-border,#a8b4a6);border-radius:12px;background:var(--ux-surface,#fffef9);color:var(--ux-ink,#192019)}
+.profile-help{font-size:12px;line-height:1.5;color:var(--ux-muted,#4b594d);margin:6px 0 14px}
+.profile-photo-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0 8px}
+html[data-ux-theme] .buzzer-profile-dialog :is(button,input[type=range]),.buzzer-profile-dialog :is(button,input[type=range]){touch-action:manipulation}
+html[data-ux-theme] .buzzer-profile-dialog button,.buzzer-profile-dialog button{min-height:44px;font:600 14px/1.3 'Bricolage Grotesque',system-ui,sans-serif;border-radius:12px;box-shadow:none}
+.profile-camera{border:1px solid var(--ux-border,#a8b4a6);border-radius:16px;background:var(--ux-raised,#e5eadf);padding:12px;margin:16px 0;color:var(--ux-ink,#192019)}
+.profile-camera p{font-size:14px;line-height:1.5;margin:0 0 12px}
+.profile-camera :is(video,canvas){width:100%;height:auto;max-height:280px;object-fit:cover;aspect-ratio:1;border-radius:12px;background:#121512;margin:10px 0}
+.profile-camera video{transform:scaleX(-1)}
+.profile-camera-actions{display:flex;flex-wrap:wrap;gap:8px}
+.profile-camera-actions button{flex:1 1 42%;padding:10px}
+.profile-crop{border:0;padding:12px 0 0;margin:12px 0;min-width:0}
+.profile-crop legend{font-size:15px;font-weight:700;padding:0}
+.profile-crop label{display:flex;align-items:center;justify-content:space-between;gap:16px;font-size:14px;margin:8px 0 0;color:var(--ux-ink,#192019)}
+.profile-crop output{font-variant-numeric:tabular-nums;color:var(--ux-muted,#4b594d)}
+html[data-ux-theme] .profile-crop input[type=range],.profile-crop input[type=range]{appearance:auto;width:100%;height:44px;min-height:44px;padding:0;border:0;background:transparent;accent-color:#527961;cursor:pointer}
+.profile-remove{margin:4px 0 0;font-size:13px}
+.profile-notice{min-height:1.5em;font-size:14px;line-height:1.5;margin:12px 0 0;color:var(--ux-ink,#192019);overflow-wrap:anywhere}
+.profile-notice[data-error=true]{font-weight:700}
+.profile-footer{position:sticky;bottom:0;z-index:3;display:flex;gap:10px;justify-content:flex-end;padding:16px 20px;background:var(--ux-surface,#fffef9);border-top:1px solid var(--ux-border,#a8b4a6)}
+.profile-footer button{flex:1;padding:12px 14px}
+html[data-ux-theme] #profile-save,html[data-ux-theme] #profile-camera-confirm,#profile-save,#profile-camera-confirm{background:var(--giallo,#e8f580);color:#192019;border-color:#89945b}
+.buzzer-profile-saved{position:fixed;z-index:80;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:calc(100vw - 32px);padding:12px 18px;border:1px solid var(--ux-border,#a8b4a6);border-radius:16px;background:var(--ux-surface,#fffef9);color:var(--ux-ink,#192019);font-size:14px;line-height:1.5;pointer-events:none;box-shadow:0 4px 20px #0002}
+html[data-ux-theme] :is(.buzzer-profile-trigger,.buzzer-profile-dialog button,.buzzer-profile-dialog input):focus-visible{outline:3px solid var(--ux-focus,#146c50);outline-offset:3px}
+html[data-ux-text=large] .buzzer-profile-dialog :is(button,label,p){font-size:17px}
+html[data-ux-contrast=true] :is(.buzzer-profile-dialog,.buzzer-profile-trigger,.profile-camera,.profile-preview){border-width:2px}
+html[data-ux-transparency=reduce] .buzzer-profile-dialog::backdrop{background:var(--ux-ground,#101210)}
+html[data-ux-transparency=reduce] :is(.buzzer-profile-dialog,.buzzer-profile-saved){box-shadow:none}
+html[data-ux-motion=reduce] :is(.buzzer-profile-trigger,.buzzer-profile-dialog,.buzzer-profile-dialog *){animation:none!important;transition:none!important}
+@media(max-width:600px){.buzzer-profile-trigger{max-width:160px;padding-right:10px}.buzzer-profile-name{max-width:94px}.buzzer-profile-dialog{border-radius:20px}.profile-heading{padding:16px}.profile-heading h2{font-size:22px}.profile-body{padding:0 16px 12px}.profile-footer{padding:14px 16px}.profile-photo-actions{gap:8px}.profile-photo-actions button{padding:10px 8px;font-size:13px}.profile-preview{width:112px;height:112px}}
+@media(max-width:370px){.buzzer-profile-trigger{max-width:124px;gap:6px}.buzzer-profile-name{max-width:66px}.profile-photo-actions{grid-template-columns:1fr}}
+@media(orientation:landscape) and (max-height:500px){.profile-preview{width:88px;height:88px;margin:12px auto}.profile-camera :is(video,canvas){max-height:200px}.profile-heading{padding-top:12px;padding-bottom:12px}}
+@media(prefers-reduced-motion:reduce){.buzzer-profile-trigger,.buzzer-profile-dialog,.buzzer-profile-dialog *{animation:none!important;transition:none!important}}

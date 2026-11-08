@@ -2,7 +2,13 @@
 (() => {
   'use strict';
   const STORAGE = 'buzzer.preferences.v1';
-  const defaults = Object.freeze({ theme: 'system', highContrast: false, textSize: 'normal', backgrounds: 'light', reduceTransparency: false, motion: 'system', focusMode: false, visualFeedback: true, sounds: true, buzzVolume: 65, effectsVolume: 45, receiveHostAudio: true });
+  const defaults = Object.freeze({ theme: 'system', highContrast: false, textSize: 'normal', backgrounds: 'light', reduceTransparency: false, motion: 'system', focusMode: false, visualFeedback: true, sounds: true, buzzVolume: 65, effectsVolume: 45, receiveHostAudio: true, buzzerColor: '#e8f580' });
+  const palette = [['Lime', '#e8f580'], ['Corallo', '#ff9ba6'], ['Menta', '#91ddca'], ['Cielo', '#83cfff'], ['Lavanda', '#c7b5f4'], ['Arancio', '#ffbb78']];
+  function buzzerInk(hex) {
+    const values = hex.slice(1).match(/../g).map(x => parseInt(x, 16) / 255).map(x => x <= .04045 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4);
+    const light = values[0] * .2126 + values[1] * .7152 + values[2] * .0722;
+    return (light + .05) / .05 > 1.05 / (light + .05) ? '#000000' : '#ffffff';
+  }
   const options = { theme: ['system', 'light', 'dark'], textSize: ['normal', 'large'], backgrounds: ['off', 'light', 'full'], motion: ['system', 'reduce'] };
   const icons = new Set(['settings','contrast','text','sun','moon','speaker','muted','play','pause','timer','users','trophy','check','connection','shuffle','duel','spotlight','message','reaction','more','countdown','reset','close','focus','motion','background','volume']);
   const root = document.documentElement;
@@ -13,7 +19,8 @@
     const next = { ...defaults };
     if (!raw || typeof raw !== 'object') return next;
     for (const key of Object.keys(defaults)) {
-      if (options[key]) { if (options[key].includes(raw[key])) next[key] = raw[key]; }
+      if (key === 'buzzerColor') { if (typeof raw[key] === 'string' && /^#[0-9a-f]{6}$/i.test(raw[key])) next[key] = raw[key].toLowerCase(); }
+      else if (options[key]) { if (options[key].includes(raw[key])) next[key] = raw[key]; }
       else if (typeof defaults[key] === 'boolean') { if (typeof raw[key] === 'boolean') next[key] = raw[key]; }
       else if (typeof raw[key] === 'number' && Number.isFinite(raw[key])) next[key] = Math.max(0, Math.min(100, raw[key]));
     }
@@ -43,6 +50,8 @@
     d.uxMotion = motionQuery.matches || prefs.motion === 'reduce' ? 'reduce' : 'normal';
     d.uxFocus = String(prefs.focusMode);
     root.style.colorScheme = d.uxTheme;
+    root.style.setProperty('--buzzer-color', prefs.buzzerColor);
+    root.style.setProperty('--buzzer-ink', buzzerInk(prefs.buzzerColor));
     updateAudioLevels();
     if (dialog) for (const el of dialog.querySelectorAll('[data-pref]')) {
       const value = prefs[el.dataset.pref];
@@ -50,6 +59,16 @@
       else el.value = value;
       const output = dialog.querySelector(`[data-output="${el.dataset.pref}"]`);
       if (output) output.textContent = `${value}%`;
+    }
+    if (dialog) {
+      const selected = palette.find(([, color]) => color === prefs.buzzerColor);
+      const name = dialog.querySelector('#buzzer-color-name');
+      if (name) name.textContent = `✓ ${selected?.[0] || 'Personalizzato'} · ${prefs.buzzerColor.toUpperCase()}`;
+      dialog.querySelectorAll('[data-buzzer-color]').forEach(button => {
+        const active = button.dataset.buzzerColor === prefs.buzzerColor;
+        button.setAttribute('aria-pressed', String(active));
+        button.querySelector('.swatch-check').textContent = active ? '✓' : '';
+      });
     }
     document.dispatchEvent(new CustomEvent('buzzer:preferences', { detail: { ...prefs } }));
   }
@@ -185,7 +204,9 @@
   }
   function pulse() {
     root.dataset.uxPulse = 'true'; clearTimeout(pulseTimeout);
-    pulseTimeout = setTimeout(() => { root.dataset.uxPulse = 'false'; }, 650);
+    const buzzer = document.getElementById('bz');
+    if (buzzer) { buzzer.classList.remove('buzz-confirmed'); void buzzer.offsetWidth; buzzer.classList.add('buzz-confirmed'); }
+    pulseTimeout = setTimeout(() => { root.dataset.uxPulse = 'false'; buzzer?.classList.remove('buzz-confirmed'); }, 750);
   }
   function attachAmbient() {
     if (!ambient) return;
@@ -198,6 +219,8 @@
     live = state ? { ...state, _receivedAt: Date.now() } : null;
     currentMode = mode || (live?.paused ? 'paused' : live?.countdown ? 'countdown' : 'lobby');
     root.dataset.uxState = currentMode;
+    const badge = document.querySelector('.buzzer-state');
+    if (badge) badge.textContent = currentMode === 'open' ? 'Pronto' : ['answering', 'queued', 'waiting'].includes(currentMode) ? 'Prenotato' : 'Chiuso';
     if (changedRound && toastRegion) toastRegion.replaceChildren();
     attachAmbient();
   }
@@ -205,6 +228,7 @@
     if (!dialog || dialog.open) return;
     lastFocus = document.activeElement;
     dialog.showModal(); updateAudioStatus();
+    window.BuzzerVisuals?.refresh();
     dialog.querySelector('button').focus();
   }
   function init() {
@@ -213,7 +237,7 @@
     trigger = document.createElement('button'); trigger.type = 'button'; trigger.className = 'ux-settings-trigger'; trigger.id = 'ux-settings'; trigger.innerHTML = `${icon('settings')}<span>Impostazioni</span>`; trigger.setAttribute('aria-haspopup','dialog'); trigger.setAttribute('aria-controls','ux-settings-dialog'); trigger.onclick = settings; document.body.append(trigger);
     // A visible link is present on every page using the free Icons8 PNGs.
     const credit = document.createElement('a'); credit.className = 'ux-icon-credit'; credit.href = 'https://icons8.it/icons/'; credit.target = '_blank'; credit.rel = 'noopener noreferrer'; credit.textContent = 'Icone Icons8'; document.body.append(credit);
-    dialog = document.createElement('dialog'); dialog.id = 'ux-settings-dialog'; dialog.className = 'ux-settings'; dialog.setAttribute('aria-labelledby','ux-settings-title');
+    dialog = document.createElement('dialog'); dialog.id = 'ux-settings-dialog'; dialog.className = 'ux-settings buzzer-glass'; dialog.dataset.glass = 'settings-panel'; dialog.setAttribute('aria-labelledby','ux-settings-title');
     const select = (key,label,values,ico) => `<label class="ux-setting"> <span>${icon(ico)}${label}</span><select data-pref="${key}">${values.map(([value,title]) => `<option value="${value}">${title}</option>`).join('')}</select></label>`;
     const toggle = (key,label,ico,help='') => `<label class="ux-setting ux-toggle"><span>${icon(ico)}<span>${label}${help ? `<small>${help}</small>` : ''}</span></span><input type="checkbox" data-pref="${key}"></label>`;
     const range = (key,label) => `<label class="ux-volume"><span>${label}<output data-output="${key}"></output></span><input type="range" data-pref="${key}" min="0" max="100" step="5"></label>`;
@@ -224,6 +248,13 @@
       ${select('textSize','Dimensione testo',[['normal','Normale'],['large','Grande']],'text')}
       ${select('backgrounds','Sfondi animati',[['off','Spenti'],['light','Leggeri'],['full','Completi']],'background')}
       ${toggle('reduceTransparency','Riduci trasparenze','contrast')}
+      </fieldset><fieldset class="buzzer-colors"><legend>Colore del mio buzzer</legend>
+      <p class="ux-settings-note">Il tuo colore, su questo dispositivo. Le regole e i colori degli altri restano personali.</p>
+      <div class="buzzer-palette">${palette.map(([name, color]) => `<button type="button" class="buzzer-swatch" data-buzzer-color="${color}" aria-pressed="false"><i style="--swatch:${color}" aria-hidden="true"></i><span>${name}</span><span class="swatch-check" aria-hidden="true"></span></button>`).join('')}</div>
+      <label class="buzzer-custom">Colore personalizzato<input type="color" id="buzzer-custom-color" data-pref="buzzerColor" value="#e8f580"></label>
+      <output id="buzzer-color-name" class="buzzer-color-name" aria-live="polite"></output>
+      <div class="buzzer-preview" aria-hidden="true">Il tuo buzzer</div><div class="buzzer-preview-states" aria-label="Anteprima stati"><span>Pronto</span><span>Prenotato</span><span>Chiuso</span></div>
+      <button type="button" id="buzzer-color-reset">Ripristina lime originale</button>
       </fieldset><fieldset><legend>Accessibilità</legend>
       ${select('motion','Movimento',[['system','Segui il sistema'],['reduce','Riduci sempre']],'motion')}
       <p class="ux-settings-note">La riduzione del movimento del sistema viene sempre rispettata.</p>
@@ -239,7 +270,9 @@
       </fieldset><p class="ux-settings-credit">Icone PNG iOS di <a href="https://icons8.it/icons/" target="_blank" rel="noopener noreferrer">Icons8</a>, usate con attribuzione. Nessun acquisto richiesto.</p></div>`;
     document.body.append(dialog);
     dialog.querySelector('#ux-settings-close').onclick = () => dialog.close();
-    dialog.addEventListener('close', () => { const target = lastFocus?.isConnected ? lastFocus : trigger; target?.focus(); });
+    dialog.addEventListener('close', () => { const target = lastFocus?.isConnected ? lastFocus : trigger; target?.focus(); window.BuzzerVisuals?.refresh(); });
+    dialog.querySelector('#buzzer-color-reset').onclick = () => setPreference('buzzerColor', '#e8f580');
+    dialog.addEventListener('click', event => { const color = event.target.closest('[data-buzzer-color]'); if (color) setPreference('buzzerColor', color.dataset.buzzerColor); });
     dialog.addEventListener('click', e => { if (e.target === dialog) { const box = dialog.getBoundingClientRect(); if (e.clientX < box.left || e.clientX > box.right || e.clientY < box.top || e.clientY > box.bottom) dialog.close(); } });
     dialog.addEventListener('input', e => {
       const el = e.target; if (!el.dataset.pref) return;

@@ -6,7 +6,7 @@ Il progetto è costruito con Node.js, Express e Socket.IO, senza database: lo st
 
 ## Funzionalità principali
 
-- **Partite con codice e chiave host**: creazione protetta da parola chiave (`HOST_PASS`) con rate limiting anti-brute-force.
+- **Partite con codice e chiave host**: creazione senza password, con limiti di frequenza; codice e chiave host per collegarsi a una stanza esistente.
 - **Vera coda di prenotazione**: registra tutti i buzz in ordine temporale con timestamp relativo (+0.Xs); se una risposta è sbagliata passa automaticamente al gruppo successivo in coda.
 - **Annulla ultima azione (Undo)**: comando Annulla (scorciatoia `Z`) per ripristinare punteggi e manche dopo click accidentali.
 - **Schermo proiettore dedicato (`/tv`)**: vista pubblica pulita e di sola lettura con QR code gigante, stato manche, ordine prenotazioni e podio finale.
@@ -47,7 +47,9 @@ npm install
 
 ## Configurazione
 
-La parola chiave predefinita per creare nuove stanze host è `KJB`. Puoi impostare la variabile d'ambiente `HOST_PASS` per sostituirla con una parola chiave diversa:
+Le stanze del quiz si creano direttamente dal pulsante **Crea stanza**, senza password. Per collegare un altro host a una stanza esistente servono ancora codice e chiave host.
+
+La variabile opzionale `HOST_PASS` riguarda soltanto il plugin Afterparty (valore predefinito `KJB`):
 
 ```bash
 export HOST_PASS="MIACHIAVE"
@@ -82,7 +84,7 @@ Nel servizio Render collegato a questo repository controllare:
 - Build Command: `npm ci`.
 - Start Command: `npm start`.
 - Health Check Path: `/healthz`.
-- Environment: `HOST_PASS=KJB`, se si vuole usare questa password anche quando è già configurato un valore diverso.
+- Environment: `HOST_PASS` configura soltanto la password della regia Afterparty; il quiz non richiede password per creare stanze.
 - Auto-Deploy: `On Commit`, per pubblicare dopo ogni push su `main`.
 
 Se gli aggiornamenti automatici sono disattivati, usare **Manual Deploy → Deploy latest commit** nel servizio esistente. Non occorre creare un altro servizio.
@@ -132,3 +134,26 @@ npm run test:browser              # opzionale: Node 22+ e Chrome/Chromium locale
 Il test browser usa contesti separati per host, partecipanti e TV senza dipendenze aggiuntive. `CHROME_PATH` permette di indicare il browser; artefatti e screenshot finiscono in `.taste-skill/browser/`. Il progetto continua a richiedere Node 18+ per server e test realtime.
 
 Le nuove icone sono **27 PNG Icons8 iOS**, inclusi localmente, con il collegamento di attribuzione visibile nelle pagine e nelle Impostazioni. Conservare questo credito. [Fonti, licenze e sostituzioni](docs/ASSETS.md), [protocollo e compatibilità delle modalità](docs/realtime.md), [verifiche e limiti](docs/VERIFICATION.md).
+
+## Menu iniziale, profilo e buzzer personale
+
+Aprendo `/` o `/player.html` si vede il nuovo menu:
+
+- **Entra in una stanza** apre il modulo squadra esistente. Un invito `/player.html?c=ABCD` salta il menu e compila il codice.
+- **Crea una stanza** crea la partita senza password e apre la regia. La richiesta ha un identificativo conservato per i ritentativi: doppio clic o conferma lenta non creano una seconda stanza.
+- **Entra come host** apre `/host.html#resume`: codice pubblico e chiave host vengono verificati dal backend. Il solo codice pubblico non dà accesso alla regia. Un host già riconosciuto può riprendere tramite le credenziali locali.
+
+Impostazioni è nella barra superiore a sinistra; il profilo personale è a destra. Nome e avatar del profilo si salvano in `buzzer.profile.v1` e restano separati da nome e selfie della squadra. Nel profilo si può scegliere una foto, regolare il ritaglio circolare o usare la fotocamera frontale con Scatta, Rifai e Conferma. Salva applica la bozza; Annulla la scarta. La fotocamera viene spenta alla chiusura e quando la scheda diventa nascosta. Su HTTP fuori da localhost o con permesso negato rimane disponibile la galleria.
+
+**Impostazioni → Colore del mio buzzer** offre palette, colore personalizzato, anteprima e ripristino del lime originale. La scelta è salvata nelle preferenze personali già esistenti. Il testo sul colore scelto usa automaticamente nero o bianco; gli stati restano scritti e non dipendono dal solo colore. Il tocco produce il feedback locale; l’anello parte solo dopo l’ACK del server. Nella regia ogni prenotazione accettata attiva un impulso sulla relativa riga, senza cambiare ordine o punteggi.
+
+Liquid Glass JS e ShaderGradient sono inclusi localmente. ShaderGradient vive in una sola isola React decorativa: pagine, comunicazione e stato del gioco restano HTML/JS/Socket.IO. Non serve una migrazione o un servizio esterno. Movimento ridotto, contrasto elevato, trasparenze ridotte e assenza di WebGL attivano alternative statiche/opache. Video e renderer si fermano a scheda nascosta. [Versioni, API, licenze e provenienza del video](docs/VISUAL-LIBRARIES.md).
+
+```sh
+npm run build:visuals  # rigenera il bundle locale, con dipendenze di sviluppo installate
+npm run test:ui        # suite Playwright del nuovo percorso, profilo e layout
+```
+
+Server e bundle statici mantengono il runtime Node 18+; gli strumenti di sviluppo e Playwright richiedono Node 20+ (verificati con Node 24). Per i test Chromium la configurazione usa Chrome installato; `npx playwright install webkit` permette di predisporre WebKit quando disponibile, configurandolo nei progetti Playwright. Il deploy può servire i bundle già presenti in `public/vendor` senza eseguire una build sul server.
+
+[Misure dello scroll, screenshot e risultati delle prove](docs/MENU-VERIFICATION.md). Il vecchio ingresso aveva il form interno alto circa 833 px: a 1280×720 scorreva di 113 px e a 1366×768 di 65 px. Il nuovo layout usa l’altezza disponibile dopo la barra, senza bloccare globalmente lo scroll: reflow e contenuti più grandi possono continuare a scorrere.

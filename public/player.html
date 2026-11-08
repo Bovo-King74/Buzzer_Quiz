@@ -11,12 +11,30 @@
 <link rel="stylesheet" href="/live-ui.css?v=20261105">
 <script src="/experience.js?v=20261105"></script>
 <script src="/live-ui.js?v=20261105"></script>
+<link rel="stylesheet" href="/profile.css?v=20261106">
+<link rel="stylesheet" href="/app-shell.css?v=20261106">
+<link rel="stylesheet" href="/visuals.css?v=20261106">
+<script src="/profile.js?v=20261106"></script>
+<script src="/app-shell.js?v=20261106"></script>
+<script src="/visuals.js?v=20261106" defer></script>
 </head>
-<body class="pl">
+<body class="pl" data-view="menu">
 <div id="net" role="alert" hidden>Connessione persa… riconnessione</div>
 
-<section id="join" class="join">
-  <a class="hostbtn" href="/host.html" title="Crea una stanza (serve la parola chiave)">Host</a>
+<section id="start-menu" class="start-menu" aria-labelledby="menu-title">
+  <div class="menu-copy"><p class="menu-signature">Una serata. Tutte le squadre.</p><h1 id="menu-title">Il prossimo punto<br>è tutto vostro.</h1><p class="menu-intro">Il quiz comincia qui. Scegli una stanza, prepara la squadra e tieni pronto il buzzer.</p>
+    <nav class="menu-actions" aria-label="Come vuoi giocare?">
+      <a id="menu-join" class="menu-primary" href="#join"><span>Entra in una stanza</span><span aria-hidden="true">↗</span></a>
+      <button id="menu-create" type="button"><span>Crea una stanza<small>Inizia una partita e invita le squadre</small></span><span aria-hidden="true">＋</span></button>
+      <a id="menu-host" href="/host.html#resume"><span>Entra come host<small>Riprendi la regia con codice e chiave host</small></span><span aria-hidden="true">→</span></a>
+    </nav><p id="menu-status" role="status"></p>
+  </div>
+  <div class="menu-scene"><video id="menu-video" muted loop playsinline preload="none" poster="/assets/menu-loop-poster.jpg" data-src="/assets/menu-loop.webm" aria-hidden="true"></video><div class="menu-scene-caption"><span>Buzzer</span><p>Pronti. Insieme.<br>Al momento giusto.</p></div></div>
+</section>
+
+<section id="join" class="join" hidden>
+  <a class="join-back" href="#menu">← Menu iniziale</a>
+  <a class="hostbtn" href="/host.html" title="Crea una stanza come host">Host</a>
   <aside class="live-photo"><img src="assets/quiz-night-generated.jpg" alt="Illustrazione di una squadra attorno a un buzzer" width="900" height="1200"><div><strong>La serata si accende.<br>Il punto lo fate voi.</strong></div></aside>
   <form class="jin" id="joinform" autocomplete="off">
   <div class="brand"><button type="button" class="brand-secret" id="secret-brand" aria-label="Buzzer">Buzzer</button><span>Il quiz, insieme.</span></div><h1>Entra in squadra</h1><p class="intro">Una squadra, un telefono. Il prossimo punto è vostro.</p>
@@ -40,7 +58,8 @@
   </header>
 
   <div id="zone" data-m="locked">
-    <button id="bz" disabled aria-label="Buzzer"><img src="assets/buzzer.png" alt=""></button>
+    <div data-shader-stage aria-hidden="true"></div>
+    <button id="bz" disabled aria-label="Buzzer"><img src="assets/buzzer.png" alt=""><span class="buzzer-state" aria-hidden="true">Chiuso</span></button>
     <h2 id="lb" aria-live="polite"></h2>
     <p id="sb" aria-live="polite"></p>
     <button id="chb">Chat<i id="dot" hidden></i></button>
@@ -64,6 +83,7 @@
 <script src="/chat-easter-egg.js?v=clean-20261104"></script>
 <script>
 const s = io(), $ = q => document.querySelector(q);
+BuzzerShell.attachPlayer(s);
 const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let cred = (() => { try { return JSON.parse(localStorage.qz || 'null'); } catch { return null; } })(), me = {}, avatar = null, pick = null, chatOn = true;
 
@@ -99,10 +119,10 @@ function join(d) {
     if (r.err) {
       $('#err').textContent = r.err;
       if (!d.nick) { localStorage.removeItem('qz'); cred = null; }
-      $('#join').hidden = false; $('#game').hidden = true; return;
+      BuzzerShell.playerOut(); return;
     }
     cred = { code: r.code, pid: r.pid, token: r.token }; localStorage.qz = JSON.stringify(cred);
-    $('#join').hidden = true; $('#game').hidden = false; $('#log').innerHTML = ''; r.hist.forEach(addMsg); awake();
+    BuzzerShell.playerJoined(); $('#log').innerHTML = ''; r.hist.forEach(addMsg); awake();
   });
 }
 
@@ -113,8 +133,8 @@ $('#joinform').onsubmit = e => {
   join({ code, nick, avatar: avatar || '', pid: cred && cred.pid, token: cred && cred.token });
 };
 
-s.on('connect', () => cred && join(cred));
-const out = msg => { localStorage.removeItem('qz'); cred = null; $('#game').hidden = true; $('#join').hidden = false; $('#err').textContent = msg; };
+s.on('connect', () => cred && !['#menu', '#join'].includes(location.hash) && join(cred));
+const out = msg => { localStorage.removeItem('qz'); cred = null; BuzzerShell.playerOut(); $('#err').textContent = msg; };
 s.on('kicked', () => out('Sei stato espulso. Puoi rientrare con il codice.'));
 s.on('banned', () => out('Sei stato bannato dalla partita.'));
 s.on('session:replaced', () => out('La squadra è collegata da un altro dispositivo.'));

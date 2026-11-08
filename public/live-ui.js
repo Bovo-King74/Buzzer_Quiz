@@ -7,6 +7,12 @@
   const icon = key => window.BuzzerUX?.icon(key) || '';
   let socket, role, state, live, offset = 0, tick, selectedPlayer, returnFocus, noticeTimeout, disconnected = false, viaUntil = 0, applauseCounts = '';
   const seen = new Set();
+  const hostPulses = new Map();
+  function paintHostPulses() {
+    if (role !== 'host') return;
+    for (const [pid, endsAt] of hostPulses) if (endsAt < Date.now()) hostPulses.delete(pid);
+    document.querySelectorAll('#sq [data-id],#lsq [data-id]').forEach(row => row.classList.toggle('host-buzz-confirmed', hostPulses.has(row.dataset.id)));
+  }
   const requestId = () => window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
   const now = () => Date.now() + offset;
   const left = object => object ? Math.max(0, object.endsAt ? object.endsAt - now() : object.remainingMs || 0) : 0;
@@ -233,6 +239,7 @@
       else if (live.countdown) text('tv-bsm', 'Via sincronizzato · prenotazioni bloccate');
     }
     decorateControls();
+    paintHostPulses();
     paintClock();
   }
   function decorateControls() {
@@ -260,7 +267,14 @@
       window.BuzzerUX?.showEffect(event);
     });
     if (role === 'host') {
-      socket.on('buzz', event => { if (fresh(event)) { window.BuzzerUX?.play('buzzer', { channel: 'buzz' }); window.BuzzerUX?.pulse(); } });
+      socket.on('buzz', event => {
+        if (!fresh(event)) return;
+        window.BuzzerUX?.play('buzzer', { channel: 'buzz' });
+      });
+      socket.on('reservation', event => {
+        if (!fresh({ ...event, id: `reservation:${event.id}` })) return;
+        if (event.pid) { hostPulses.set(event.pid, Date.now() + 900); paintHostPulses(); setTimeout(paintHostPulses, 920); }
+      });
       socket.on('sfx', event => { if (typeof event === 'string') window.BuzzerUX?.play(event); else if (fresh(event)) window.BuzzerUX?.play(event.name); });
     }
     const restartClock = () => {

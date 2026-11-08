@@ -8,7 +8,7 @@ Chrome locale in modalità headless, Node 24.21.0. Il test browser usa il protoc
 node test/browser-smoke.mjs
 ```
 
-Il controllo opzionale richiede Node 22+ e Chrome/Chromium installato. `CHROME_PATH` consente di indicare l'eseguibile. Il test avvia il server su una porta locale temporanea; per un server già avviato impostare `BROWSER_TEST_URL` e `BROWSER_TEST_PASSWORD`. Non usarlo su una partita reale: crea una stanza e ne cambia lo stato.
+Il controllo opzionale richiede Node 22+ e Chrome/Chromium installato. `CHROME_PATH` consente di indicare l'eseguibile. Il test avvia il server su una porta locale temporanea; per un server già avviato impostare `BROWSER_TEST_URL`; la creazione della stanza quiz non richiede password. Non usarlo su una partita reale: crea una stanza e ne cambia lo stato.
 
 Gli screenshot e il rapporto JSON sono scritti in `.taste-skill/browser/`; `BROWSER_TEST_OUT` cambia la destinazione.
 `--capture` crea una stanza e acquisisce anche le viste di gioco a 1440, 768 e 390 px, i menu host e i temi del partecipante.

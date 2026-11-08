@@ -34,7 +34,7 @@ function record(id, actual) { evidence.push({ id, actual }); console.log(JSON.st
     const connect = async (ns = '') => { const c = client(`http://127.0.0.1:${port}${ns}`, { transports: ['websocket'], forceNew: true, reconnection: false }); clients.push(c); await new Promise((resolve, reject) => { c.once('connect', resolve); c.once('connect_error', reject); }); return c; };
     const send = (socket, event, data = {}) => new Promise((resolve, reject) => socket.timeout(2500).emit(event, data, (err, r) => err ? reject(err) : resolve(r)));
     const host = await connect(), a = await connect(), b = await connect(), c = await connect();
-    const room = await send(host, 'host:create', { pass: 'AUDIT' }); assert.ok(room.key);
+    const room = await send(host, 'host:create'); assert.ok(room.key);
     let state; host.on('state', x => { state = x; });
     const pa = await send(a, 'join', { code: room.code, nick: 'Alfa' }), pb = await send(b, 'join', { code: room.code, nick: 'Beta' }), pc = await send(c, 'join', { code: room.code, nick: 'Gamma' });
     const act = async (type, extra = {}) => { host.emit('act', { type, ...extra }); await wait(80); };

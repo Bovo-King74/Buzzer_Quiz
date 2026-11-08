@@ -8,7 +8,9 @@
     "test": "node test/test.js && node --test test/realtime.test.js",
     "test:afterparty": "node --test test/afterparty.test.js",
     "test:afterparty:integration": "node --test test/afterparty.integration.js",
-    "test:browser": "node test/browser-smoke.mjs"
+    "test:browser": "node test/browser-smoke.mjs",
+    "build:visuals": "node visuals-src/build.mjs",
+    "test:ui": "playwright test"
   },
   "engines": {
     "node": ">=18"
@@ -17,5 +19,16 @@
     "express": "^4.19.2",
     "qrcode": "^1.5.3",
     "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "@react-three/fiber": "9.8.2",
+    "@shadergradient/react": "2.4.20",
+    "camera-controls": "2.9.0",
+    "esbuild": "0.28.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "three": "0.169.0",
+    "three-stdlib": "2.36.1"
   }
 }
