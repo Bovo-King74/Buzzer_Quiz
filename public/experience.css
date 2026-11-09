@@ -72,10 +72,11 @@ html[data-ux-pulse=true]:not([data-ux-focus=true]) #bz{outline:6px solid #192019
 /* Replace the old repeating wobble/blink with steady, readable status. */
 #zone[data-m=answering] #bz:disabled,#net,#chb i{animation:none!important}
 html[data-ux-motion=reduce] *,html[data-ux-motion=reduce] *::before,html[data-ux-motion=reduce] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
-html[data-ux-focus=true] :is(.slam,.pop,.drop,.plus,.msg){animation:none!important}
+html[data-ux-focus=true] :is(.slam,.pop,.drop,.plus,.msg,.ux-toast){animation:none!important}
 html[data-ux-focus=true] :is(.live-photo,.plus){display:none!important}
 html[data-ux-focus=true] .join{grid-template-columns:1fr}
-html[data-ux-transparency=reduce] :is(.ux-settings::backdrop,#big){background:var(--ux-ground)}
+html[data-ux-transparency=reduce] .ux-settings::backdrop,html[data-ux-contrast=true] .ux-settings::backdrop{background:var(--ux-ground)}
+html[data-ux-transparency=reduce] #big{background:var(--ux-ground)}
 html[data-ux-transparency=reduce] :is(.ux-toast,.ux-settings,.ux-settings-trigger){box-shadow:none}
 html[data-ux-transparency=reduce] .ux-ambient{opacity:.06}
 html[data-ux-hidden=true] *,html[data-ux-hidden=true] *::before,html[data-ux-hidden=true] *::after{animation-play-state:paused!important}
@@ -92,4 +93,5 @@ html[data-ux-contrast=true] .ux-ambient{display:none}
 @keyframes ux-toast-in{from{transform:translateY(-8px);opacity:0}to{transform:translateY(0);opacity:1}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 @media(max-width:700px){body.started .ux-settings-trigger{bottom:calc(94px + env(safe-area-inset-bottom))}body.started .ux-icon-credit{bottom:calc(80px + env(safe-area-inset-bottom))}.ux-settings-trigger{font-size:13px;padding:10px}.ux-settings-body{padding:4px 16px 20px}.ux-settings-heading{padding:16px}.ux-setting{gap:10px}.ux-setting select{width:150px}.ux-setting>span{gap:8px}}
+@media(max-width:720px){.ux-setting:not(.ux-toggle){align-items:stretch;flex-direction:column;gap:8px}.ux-setting:not(.ux-toggle) select{width:100%;max-width:100%}}
 @media(orientation:landscape) and (max-height:500px){.ux-settings-trigger{right:10px;bottom:calc(16px + env(safe-area-inset-bottom))}.ux-settings-trigger span{display:none}.ux-icon-credit{right:4px}.ux-toasts{top:calc(8px + env(safe-area-inset-top));left:66%;width:32vw}.ux-toast{padding:8px;font-size:12px}.ux-toast-symbol{font-size:20px}}

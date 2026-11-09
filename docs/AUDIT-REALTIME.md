@@ -1,5 +1,7 @@
 # Audit realtime e affidabilità — 6 novembre 2026
 
+> Rapporto storico del 06/11/2026. Le correzioni e le verifiche successive sono in [SECURITY-FIXES.md](SECURITY-FIXES.md) e [FUNCTIONAL-CHECKLIST.md](FUNCTIONAL-CHECKLIST.md). `test/audit-realtime.js` ora esegue regressioni di accettazione; non riproduce più deliberatamente i vecchi difetti.
+
 Revisione indipendente in sola lettura del codice applicativo. Nessuna correzione di produzione introdotta. Le riproduzioni vivono in `test/audit-realtime.js`: avviano un server temporaneo sulla porta **3143**, creano stanze effimere e lo chiudono. Il test del payload malformato termina deliberatamente quel processo temporaneo. Non eseguire lo script contro un server usato per giocare.
 
 Eseguito con Node 24.21.0, Socket.IO installato nel repository. Comando `node test/audit-realtime.js`, risultato **exit 0**: le asserzioni confermano i difetti osservati, non certificano la correttezza del prodotto. Il sandbox ha richiesto autorizzazione all'ascolto su localhost.

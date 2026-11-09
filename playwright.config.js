@@ -2,13 +2,13 @@ const { defineConfig } = require('@playwright/test');
 const port = Number(process.env.PW_PORT || 3150);
 module.exports = defineConfig({
   testDir: './test',
-  testMatch: 'menu-profile.spec.js',
+  testMatch: process.env.PW_FULL_AUDIT === '1' ? 'full-audit.spec.js' : 'menu-profile.spec.js',
   fullyParallel: false,
   workers: 1,
   timeout: 90000,
   expect: { timeout: 6000 },
-  reporter: [['list'], ['json', { outputFile: '.taste-skill/playwright/results.json' }]],
-  outputDir: '.taste-skill/playwright/test-results',
+  reporter: [['list'], ['json', { outputFile: process.env.PW_FULL_AUDIT === '1' ? '.taste-skill/playwright/audit-results.json' : '.taste-skill/playwright/results.json' }]],
+  outputDir: process.env.PW_FULL_AUDIT === '1' ? '.taste-skill/playwright/audit-test-results' : '.taste-skill/playwright/test-results',
   use: { baseURL: `http://127.0.0.1:${port}`, trace: 'retain-on-failure', screenshot: 'only-on-failure' },
   projects: [{ name: 'chromium', use: { browserName: 'chromium', channel: 'chrome' } }],
   webServer: {

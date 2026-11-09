@@ -67,7 +67,7 @@ test('real Socket.IO: host + players, authoritative queue, private effects, mode
   const send = (c, event, data = {}) => new Promise((resolve, reject) => c.timeout(2500).emit(event, data, (error, r) => error ? reject(error) : resolve(r)));
   const until = async (condition, label = 'state') => { const stop = Date.now() + 6000; while (!condition()) { if (Date.now() > stop) throw new Error('Timed out: ' + label); await wait(10); } };
   const host = await connect(), a = await connect(), b = await connect(), c = await connect(), tv = await connect();
-  const creation = { origin: url, requestId: 'integration-create-once-1234' };
+  const creation = { origin: url, requestId: '1234567890abcdef1234567890abcdef' };
   const [room, duplicate] = await Promise.all([send(host, 'host:create', creation), send(host, 'host:create', creation)]);
   assert.ok(room.key); assert.equal(duplicate.code, room.code); assert.equal(duplicate.key, room.key);
   assert.equal((await (await fetch(url + '/healthz')).json()).games, 1);

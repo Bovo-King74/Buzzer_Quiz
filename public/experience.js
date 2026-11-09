@@ -27,9 +27,9 @@
     return next;
   }
   let prefs = validate(safeRead()), dialog, trigger, ambient, toastRegion, lastFocus;
-  let context = null, master, buzzGain, effectsGain, receivedGain, unlocked = false, unavailable = false;
+  let context = null, master, buzzGain, effectsGain, receivedGain, unlocked = false, unavailable = false, unlockPromise, mediaPromise;
   let live = null, currentMode = 'lobby', pulseTimeout;
-  const activeVoices = new Set(), seen = new Set(), buffers = new Map(), files = new Map();
+  const activeVoices = new Set(), seen = new Set(), buffers = new Map(), files = new Map(), decoding = new Map();
   const icon = name => icons.has(name) ? `<img class="ux-icon" src="/assets/icons8/${name}.png" width="20" height="20" alt="" aria-hidden="true" draggable="false">` : '';
   const now = () => Date.now() + (live ? live.serverNow - live._receivedAt : 0);
   function updateAudioLevels() {
@@ -81,18 +81,27 @@
   addEventListener('storage', e => { if (e.key === STORAGE) { prefs = validate(safeRead()); apply(); } });
   apply();
 
-  // Fetch media once, ahead of the first buzz. Decode after an explicit gesture unlocks audio.
-  fetch('/api/sounds').then(r => r.ok ? r.json() : {}).then(async sources => {
-    await Promise.allSettled(['buzzer','giusto','sbagliato'].filter(k => typeof sources[k] === 'string').map(async key => {
-      const url = new URL(sources[key], location.origin);
-      if (url.origin !== location.origin) return;
-      const response = await fetch(url);
-      if (response.ok) { files.set(key, await response.arrayBuffer()); if (context) await decodeFile(key); }
-    }));
-  }).catch(() => {});
+  // No audio request during page load. The first explicit gesture prepares media once;
+  // local press/fallback synthesis stays immediate and never waits for a download.
+  function prepareMedia() {
+    if (mediaPromise) return mediaPromise;
+    mediaPromise = fetch('/api/sounds').then(r => r.ok ? r.json() : {}).then(async sources => {
+      if (!sources || typeof sources !== 'object') return;
+      await Promise.allSettled(['buzzer','giusto','sbagliato'].filter(k => typeof sources[k] === 'string').map(async key => {
+        const url = new URL(sources[key], location.origin);
+        if (url.origin !== location.origin || !url.pathname.startsWith('/sounds/')) return;
+        const response = await fetch(url);
+        if (response.ok) { files.set(key, await response.arrayBuffer()); await decodeFile(key); }
+      }));
+    }).catch(() => { /* A failed optional download keeps synthesis available. */ });
+    return mediaPromise;
+  }
   async function decodeFile(key) {
     if (!context || !files.has(key) || buffers.has(key)) return;
-    try { buffers.set(key, await context.decodeAudioData(files.get(key).slice(0))); } catch { /* Synthesis remains available. */ }
+    if (decoding.has(key)) return decoding.get(key);
+    const pending = context.decodeAudioData(files.get(key).slice(0)).then(buffer => buffers.set(key, buffer)).catch(() => { /* Synthesis remains available. */ }).finally(() => { decoding.delete(key); files.delete(key); });
+    decoding.set(key, pending);
+    return pending;
   }
   function audioStatus() { return unavailable ? 'unavailable' : unlocked && context?.state === 'running' ? 'ready' : 'locked'; }
   function updateAudioStatus() {
@@ -100,27 +109,34 @@
     if (el) el.textContent = { unavailable: 'Audio non disponibile: il gioco continua con i feedback visivi.', ready: 'Audio pronto su questo dispositivo.', locked: 'Tocca “Prova audio” per attivare l’audio su questo dispositivo.' }[audioStatus()];
   }
   async function unlock() {
-    if (unavailable) return false;
-    try {
-      if (!context) {
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextClass) throw new Error('Audio unavailable');
-        context = new AudioContextClass({ latencyHint: 'interactive' });
-        master = context.createGain(); master.connect(context.destination);
-        buzzGain = context.createGain(); buzzGain.connect(master);
-        effectsGain = context.createGain(); effectsGain.connect(master);
-        receivedGain = context.createGain(); receivedGain.connect(master);
-        updateAudioLevels();
-        for (const key of files.keys()) void decodeFile(key);
-        context.addEventListener('statechange', updateAudioStatus);
-      }
-      if (context.state === 'suspended') await context.resume();
-      unlocked = context.state === 'running';
-      // A silent source in the gesture also unlocks older mobile WebKit implementations.
-      if (unlocked) { const source = context.createBufferSource(); source.buffer = context.createBuffer(1, 1, context.sampleRate); source.connect(master); source.start(); }
-      updateAudioStatus();
-      return unlocked;
-    } catch { unavailable = true; updateAudioStatus(); return false; }
+    if (unavailable || !prefs.sounds || document.hidden) return false;
+    if (unlocked && context?.state === 'running') { void prepareMedia(); return true; }
+    if (unlockPromise) return unlockPromise;
+    unlockPromise = (async () => {
+      try {
+        if (!context) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) throw new Error('Audio unavailable');
+          context = new AudioContextClass({ latencyHint: 'interactive' });
+          master = context.createGain(); master.connect(context.destination);
+          buzzGain = context.createGain(); buzzGain.connect(master);
+          effectsGain = context.createGain(); effectsGain.connect(master);
+          receivedGain = context.createGain(); receivedGain.connect(master);
+          updateAudioLevels();
+          context.addEventListener('statechange', updateAudioStatus);
+        }
+        if (context.state === 'suspended') await context.resume();
+        unlocked = context.state === 'running';
+        // One silent source per unlock also supports older mobile WebKit implementations.
+        if (unlocked) {
+          const source = context.createBufferSource(); source.buffer = context.createBuffer(1, 1, context.sampleRate); source.connect(master);
+          source.onended = () => source.disconnect(); source.start();
+          void prepareMedia();
+        }
+        updateAudioStatus(); return unlocked;
+      } catch { unlocked = false; unavailable = !context || context.state === 'closed'; updateAudioStatus(); return false; }
+    })();
+    try { return await unlockPromise; } finally { unlockPromise = null; }
   }
   for (const event of ['pointerdown','keydown']) document.addEventListener(event, e => {
     if (e.isTrusted && (!unlocked || context?.state === 'suspended')) void unlock();
@@ -199,7 +215,7 @@
     el.append(picture, text);
     while (toastRegion.childElementCount >= 2) toastRegion.firstElementChild.remove();
     toastRegion.append(el);
-    setTimeout(() => el.remove(), Math.min(4500, Math.max(1500, event.expiresAt ? event.expiresAt - now() : 3500)));
+    setTimeout(() => el.remove(), Math.min(4500, event.expiresAt ? Math.max(0, event.expiresAt - now()) : 3500));
     return el;
   }
   function pulse() {
@@ -277,6 +293,7 @@
     dialog.addEventListener('input', e => {
       const el = e.target; if (!el.dataset.pref) return;
       setPreference(el.dataset.pref, el.type === 'checkbox' ? el.checked : el.type === 'range' ? Number(el.value) : el.value);
+      if (e.isTrusted && el.dataset.pref === 'sounds' && el.checked) void unlock();
     });
     dialog.querySelector('#ux-test-audio').onclick = async () => {
       const ready = await unlock();

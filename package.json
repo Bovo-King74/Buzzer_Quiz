@@ -5,12 +5,14 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node test/test.js && node --test test/realtime.test.js",
+    "test": "node test/test.js && node --test test/realtime.test.js test/security-regressions.test.js",
     "test:afterparty": "node --test test/afterparty.test.js",
     "test:afterparty:integration": "node --test test/afterparty.integration.js",
     "test:browser": "node test/browser-smoke.mjs",
     "build:visuals": "node visuals-src/build.mjs",
-    "test:ui": "playwright test"
+    "test:ui": "playwright test",
+    "test:security": "node --test test/security-regressions.test.js",
+    "test:regressions": "PW_FULL_AUDIT=1 playwright test"
   },
   "engines": {
     "node": ">=18"

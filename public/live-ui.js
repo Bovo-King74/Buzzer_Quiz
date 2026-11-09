@@ -18,6 +18,8 @@
   const left = object => object ? Math.max(0, object.endsAt ? object.endsAt - now() : object.remainingMs || 0) : 0;
   const $ = id => document.getElementById(id);
   function text(id, value) { const el = $(id); if (el && el.textContent !== value) el.textContent = value; }
+  function hidden(id, value) { const el = $(id); if (el && el.hidden !== !!value) el.hidden = !!value; }
+  function html(id, value) { const el = $(id); if (el && el.innerHTML !== value) el.innerHTML = value; }
   function notify(value) {
     clearTimeout(noticeTimeout);
     text('live-notice', value);
@@ -27,7 +29,7 @@
   function command(type, data = {}) {
     window.BuzzerUX?.unlock();
     if (!socket?.connected) { notify('Connessione assente. Attendi il collegamento.'); return; }
-    socket.timeout(4000).emit('live:act', { type, requestId: requestId(), ...data }, (error, result) => {
+    socket.timeout(4000).emit('live:act', { type, roundId: live?.roundId, requestId: requestId(), ...data }, (error, result) => {
       notify(error ? 'Conferma non ricevuta. Controlla lo stato prima di riprovare.' : result?.error || (result?.ok ? 'Comando eseguito.' : 'Comando non disponibile.'));
     });
   }
@@ -83,7 +85,7 @@
       const button = event.target.closest('[data-effect]'); if (!button || !selectedPlayer) return;
       if (!socket.connected) { text('player-action-notice', 'Connessione assente.'); return; }
       window.BuzzerUX?.unlock();
-      socket.timeout(4000).emit('host:effect', { pid: selectedPlayer, kind: button.dataset.effect, value: button.dataset.value, requestId: requestId() }, (error, result) => {
+      socket.timeout(4000).emit('host:effect', { roundId: live?.roundId, pid: selectedPlayer, kind: button.dataset.effect, value: button.dataset.value, requestId: requestId() }, (error, result) => {
         text('player-action-notice', error ? 'Conferma non ricevuta.' : result?.error || 'Inviato al destinatario.');
       });
     });
@@ -91,7 +93,7 @@
       const button = event.target.closest('[data-manage]'); if (!button || !selectedPlayer) return;
       const player = state.players.find(p => p.id === selectedPlayer);
       if (player && confirm(`${button.dataset.manage === 'ban' ? 'Bannare' : 'Espellere'} ${player.nick}?`)) {
-        socket.emit('act', { type: button.dataset.manage, id: selectedPlayer }); actions.close();
+        socket.emit('act', { type: button.dataset.manage, roundId: live?.roundId, id: selectedPlayer }); actions.close();
       }
     });
     $('player-spotlight').onclick = () => command('spotlight', { pid: selectedPlayer });
@@ -129,9 +131,9 @@
     document.querySelector('[data-legacy="undo"]').disabled = blocked;
     document.querySelectorAll('#cmd button,#fab button').forEach(button => { if (blocked) button.disabled = true; });
     $('live-go').disabled = !state.started || live.paused || (!live.countdown && (state.phase !== 'locked' || live.applause && !live.applause.closed));
-    $('live-go').innerHTML = icon('countdown') + (live.countdown ? ' Annulla VIA' : ' Via 3–2–1');
+    html('live-go', icon('countdown') + (live.countdown ? ' Annulla VIA' : ' Via 3–2–1'));
     $('live-pause').disabled = !state.started;
-    $('live-pause').innerHTML = icon(live.paused ? 'play' : 'pause') + (live.paused ? ' Riprendi' : ' Pausa');
+    html('live-pause', icon(live.paused ? 'play' : 'pause') + (live.paused ? ' Riprendi' : ' Pausa'));
     $('duel-start').disabled = live.paused || !!live.countdown || state.phase !== 'locked' || state.players.filter(p => p.st === 'ok' && p.on).length < 2;
     $('timer-start').disabled = live.paused || state.phase !== 'answering';
     $('timer-toggle').disabled = live.paused || !live.timer || live.timer.status === 'expired';
@@ -174,7 +176,7 @@
   function paintClock() {
     if (!live || document.hidden) return;
     const countdown = live.countdown;
-    $('live-clock').hidden = !countdown && Date.now() >= viaUntil;
+    hidden('live-clock', !countdown && Date.now() >= viaUntil);
     if (countdown) {
       const remaining = live.paused ? countdown.remainingMs : left(countdown);
       const value = remaining > 0 ? String(Math.ceil(remaining / 1000)) : 'Attendi il VIA…';
@@ -184,14 +186,14 @@
     }
     else if (Date.now() < viaUntil) text('live-clock', 'VIA!');
     const timer = live.timer;
-    $('live-timer').hidden = !timer;
+    hidden('live-timer', !timer);
     if (timer) {
       const remaining = timer.status === 'running' && !live.paused ? left(timer) : timer.remainingMs;
       const expired = timer.status === 'expired';
       text('live-timer', expired ? 'Tempo scaduto' : `Tempo ${Math.ceil((remaining || 0) / 1000)}s${timer.status === 'paused' || live.paused ? ' · in pausa' : ''}`);
       $('live-timer').classList.toggle('expired', expired);
     }
-    if (state?.presence) $('live-presence').hidden = state.presence.expiresAt <= now();
+    if (state?.presence) hidden('live-presence', state.presence.expiresAt <= now());
     if (live.draw) {
       const player = state.players?.find(p => p.id === live.draw.pid);
       const drawing = now() - live.draw.at < 700;

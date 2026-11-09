@@ -1,12 +1,16 @@
 const express = require('express'), http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto');
 const { Server } = require('socket.io'), QR = require('qrcode');
 const liveGame = require('./lib/live-game');
+const security = require('./lib/security'), { validateAvatar } = require('./lib/avatar');
 
 const app = express(), srv = http.createServer(app);
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
+const origins = security.originPolicy(process.env.BUZZER_ALLOWED_ORIGINS);
 const io = new Server(srv, {
+  allowRequest: (request, callback) => callback(null, origins.allows(request)),
+  cors: (request, callback) => callback(null, { origin: origins.allows(request) ? request.headers.origin || false : false, methods: ['GET', 'POST'], credentials: false }),
   maxHttpBufferSize: 512 * 1024,
   pingInterval: 10000,
   pingTimeout: 10000
@@ -27,22 +31,16 @@ app.get('/host', (q, r) => r.redirect('/host.html'));
 app.get('/tv', (q, r) => r.redirect('/tv.html'));
 app.get('/healthz', (q, r) => r.json({ ok: true, games: Object.keys(games).length, uptime: process.uptime() }));
 
-// Endpoint avatar ottimizzato con cache HTTP (T-02)
+// Only server-generated initials may be SVG; uploaded avatars are validated raster bytes.
 app.get('/avatar/:code/:pid', (q, r) => {
-  const g = games[String(q.params.code).toUpperCase()];
-  const p = g && g.players[q.params.pid];
-  if (!p || !p.avatarData) return r.status(404).send('Not found');
+  const g = games[security.code(q.params.code)], p = g && g.players[security.playerId(q.params.pid)];
+  if (!p) return r.status(404).send('Not found');
   r.setHeader('Cache-Control', 'public, max-age=86400, immutable');
-  if (p.avatarData.startsWith('data:image/svg+xml')) {
-    const svg = decodeURIComponent(p.avatarData.split(',')[1]);
-    r.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
-    return r.send(svg);
-  } else if (p.avatarData.startsWith('data:image/')) {
-    const parts = p.avatarData.split(',');
-    const mime = parts[0].match(/:(.*?);/)[1];
-    const buf = Buffer.from(parts[1], 'base64');
-    r.setHeader('Content-Type', mime);
-    return r.send(buf);
+  r.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+  if (p.avatarBytes && p.avatarMime) return r.type(p.avatarMime).send(p.avatarBytes);
+  if (p.avatarData?.startsWith('data:image/svg+xml')) {
+    r.type('image/svg+xml');
+    return r.send(decodeURIComponent(p.avatarData.slice(p.avatarData.indexOf(',') + 1)));
   }
   r.status(404).send('Not found');
 });
@@ -82,18 +80,14 @@ app.get('/api/sounds', (q, r) => {
   r.set('Cache-Control', 'no-store').json(o);
 });
 
-// Password used only by the separate Afterparty plugin; quiz creation is public.
-let HOST_PASS;
-if (process.env.HOST_PASS) {
-  HOST_PASS = String(process.env.HOST_PASS).toUpperCase();
-} else {
-  HOST_PASS = 'KJB';
-}
-
-const ipOf = s => s.handshake.address;
+// Quiz creation stays public. Afterparty needs an explicit deployment password.
+const configuredAfterparty = !!process.env.HOST_PASS?.trim();
+const HOST_PASS = configuredAfterparty ? process.env.HOST_PASS.trim().toUpperCase() : crypto.randomBytes(32).toString('hex').toUpperCase();
+const expressIP = Object.getOwnPropertyDescriptor(express.request, 'ip').get;
+const ipOf = s => { s.request.app = app; return expressIP.call(s.request) || s.handshake.address; };
 
 // Rate limiter generico per IP
-const rateLimit = {};
+const rateLimit = Object.create(null);
 function checkRate(ip, key, max, windowMs) {
   const k = ip + ':' + key;
   const now = Date.now();
@@ -115,7 +109,6 @@ const letterAvatar = nick => {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${bg}"/><text x="50" y="72" text-anchor="middle" font-family="Impact,Arial Black,sans-serif" font-weight="900" font-size="64" fill="${fg}">${xml(ch)}</text></svg>`;
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 };
-const IMG_URI = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/]+=*$/;
 
 const games = Object.create(null);
 // Retry tokens ensure a double tap or reconnect creates a single room.
@@ -125,7 +118,7 @@ const mkCode = () => { let c; do c = Array.from({ length: 4 }, () => 'ABCDEFGHJK
 
 // phase: locked | open | answering   (ans = id di chi sta rispondendo)
 const newGame = (creatorIp) => ({
-  code: mkCode(), key: rid(4).toUpperCase(), players: Object.create(null), banned: [], phase: 'locked', ans: null, started: false,
+  code: mkCode(), key: rid(32).toUpperCase(), players: Object.create(null), banned: [], phase: 'locked', ans: null, started: false,
   answered: new Set(), order: [], done: false, chat: [], last: Date.now(),
   set: { approve: false, joinOpen: true, chat: true, pts: 1, autoReopen: true },
   creatorIp, undo: [], live: liveGame.init(), ending: false
@@ -138,6 +131,12 @@ const after = g => {
   else { g.phase = 'locked'; if (!elig(g)) g.done = true; }
 };
 const mode = liveGame.mode;
+function emitHosts(g, event, value) {
+  for (const id of io.sockets.adapter.rooms.get('H' + g.code) || []) {
+    const socket = io.sockets.sockets.get(id);
+    if (socket?.data.host && socket.data.code === g.code) socket.emit(event, value);
+  }
+}
 
 // Snapshot per Annulla (T-09)
 function pushUndo(g) {
@@ -154,10 +153,10 @@ function pushUndo(g) {
   if (g.undo.length > 10) g.undo.shift();
 }
 
-// Debounce sync (T-02)
+// Coalesce updates within 30 ms, with a bounded delay even during a continuous stream.
 const syncDebounce = {};
 function sync(g) {
-  if (syncDebounce[g.code]) clearTimeout(syncDebounce[g.code]);
+  if (syncDebounce[g.code]) return;
   syncDebounce[g.code] = setTimeout(() => {
     delete syncDebounce[g.code];
     _syncNow(g);
@@ -171,6 +170,8 @@ function _syncNow(g) {
   g.last = Date.now();
   const sorted = Object.values(g.players).filter(x => x.st === 'ok').sort((a, b) => b.score - a.score);
   const total = sorted.length;
+  const ranks = new Map(sorted.map((p, index) => [p.id, index + 1]));
+  const positions = new Map(g.order.map((item, index) => [item.id, index + 1]));
   io.to('H' + g.code).emit('state', {
     code: g.code, started: g.started, phase: g.phase, ans: g.ans, order: g.order, answered: [...g.answered],
     live, set: g.set, players: Object.values(g.players).map(pub), banned: g.banned
@@ -178,11 +179,11 @@ function _syncNow(g) {
   const who = g.players[g.ans]?.nick || '';
   for (const p of Object.values(g.players)) {
     if (p.sid) {
-      const rank = sorted.findIndex(x => x.id === p.id) + 1;
+      const rank = ranks.get(p.id) || 0;
       io.to(p.sid).emit('me', {
         id: p.id, mode: mode(g, p), score: p.score, nick: p.nick, avatar: p.avatar,
         who: g.ans === p.id ? '' : who, chat: g.set.chat, rank, total, live,
-        queued: g.order.some(o => o.id === p.id), position: g.order.findIndex(o => o.id === p.id) + 1,
+        queued: positions.has(p.id), position: positions.get(p.id) || 0,
         presence: p.presence || null
       });
     }
@@ -213,10 +214,16 @@ const reserved = ['host', 'admin', 'moderatore', 'sistema'];
 
 io.on('connection', s => {
   s.data = {};
+  const on = (event, handler) => s.on(event, (...args) => {
+    const invalid = () => { const cb = args[args.length - 1]; if (typeof cb === 'function') cb({ ok: false, err: 'Richiesta non valida', error: 'Richiesta non valida' }); };
+    try { const result = handler(...args); if (result && typeof result.catch === 'function') result.catch(invalid); }
+    catch { invalid(); }
+  });
   const G = () => s.data.host && games[s.data.code];
   const info = async (g, origin, host = true) => {
-    const url = `${origin || ''}/player.html?c=${g.code}`;
-    return { code: g.code, ...(host ? { key: g.key } : {}), url, qr: await QR.toDataURL(url, { margin: 1, width: 400 }), hist: g.chat, final: g.final || null };
+    const base = origins.publicOrigin(s.request, origin);
+    const url = `${base}/player.html?c=${g.code}`;
+    return { code: g.code, ...(host ? { key: g.key } : {}), url, qr: await QR.toDataURL(url, { margin: 1, width: 400 }), hist: host ? g.chat : [], final: g.final || null };
   };
 
   const leaveIdentity = () => {
@@ -231,23 +238,29 @@ io.on('connection', s => {
   };
   const answer = (cb, result) => { if (typeof cb === 'function') cb(result); };
   const request = (event, d, cb, fn) => {
-    d = d && typeof d === 'object' ? d : {};
+    if (!security.object(d)) return answer(cb, liveGame.fail('Richiesta non valida'));
     const cache = s.data.requests || (s.data.requests = new Map());
-    const requestId = typeof d.requestId === 'string' ? d.requestId.slice(0, 80) : '';
-    const key = event + ':' + requestId;
-    if (requestId && cache.has(key)) return answer(cb, cache.get(key));
+    const requestId = typeof d.requestId === 'string' && d.requestId.length <= 80 ? d.requestId : '';
+    const key = event + ':' + requestId, currentRound = () => games[s.data.code]?.live.roundId;
+    if (requestId && cache.has(key)) {
+      const previous = cache.get(key);
+      return answer(cb, previous.roundId === currentRound() ? previous.result : liveGame.fail('Questa manche è terminata'));
+    }
     let result;
     try { result = fn(d); } catch { result = liveGame.fail('Richiesta non valida'); }
-    if (requestId) { cache.set(key, result); if (cache.size > 100) cache.delete(cache.keys().next().value); }
+    if (requestId) { cache.set(key, { result, roundId: currentRound() }); if (cache.size > 100) cache.delete(cache.keys().next().value); }
     answer(cb, result);
   };
+  const staleRound = (g, d) => d.roundId !== undefined && (typeof d.roundId !== 'string' || d.roundId !== g.live.roundId);
 
   // ---------- HOST ----------
-  s.on('host:create', async (d, cb) => {
+  on('host:create', async (d, cb) => {
     if (typeof cb !== 'function') return;
+    if (!security.object(d)) return cb({ err: 'Richiesta non valida' });
     const ip = ipOf(s);
-    const requestId = typeof d?.requestId === 'string' && /^[A-Za-z0-9_-]{16,100}$/.test(d.requestId) ? d.requestId : null;
-    const requestKey = requestId && `${ip}:${requestId}`;
+    const requestId = security.creationToken(d.requestId);
+    if (d.requestId !== undefined && !requestId) return cb({ err: 'Identificativo di creazione non valido' });
+    const requestKey = requestId || null;
     const previous = requestKey && creationRequests.get(requestKey);
     const existing = previous && Date.now() - previous.at < 600000 && games[previous.code];
     if (existing) {
@@ -265,21 +278,25 @@ io.on('connection', s => {
     cb(await info(g, d && d.origin)); sync(g);
   });
 
-  s.on('host:join', async (d, cb) => {
-    if (typeof cb !== 'function') return; d = d || {};
-    const ip = ipOf(s);
-    if (!checkRate(ip, 'host:join', 10, 60000)) return cb({ err: 'Troppi tentativi, riprova tra un minuto' });
-    const g = games[String(d.code || '').toUpperCase()];
-    if (!g || g.key !== String(d.key || '').trim().toUpperCase()) return cb({ err: 'Codice o chiave host non validi' });
+  on('host:join', async (d, cb) => {
+    if (typeof cb !== 'function') return;
+    if (!security.object(d)) return cb({ err: 'Richiesta non valida' });
+    const g = games[security.code(d.code)], key = security.text(d.key, 65).trim().toUpperCase();
+    if (!g || !security.secretEqual(g.key, key)) {
+      const permitted = checkRate(ipOf(s), 'host:join:fail', 10, 60000);
+      return cb({ err: permitted ? 'Codice o chiave host non validi' : 'Troppi tentativi, riprova tra un minuto' });
+    }
+    if (!checkRate(g.code, 'host:resume', 120, 10000)) return cb({ err: 'Troppi collegamenti host, attendi un momento' });
     leaveIdentity();
     s.data = { host: true, code: g.code }; s.join('H' + g.code);
     cb(await info(g, d.origin)); sync(g);
   });
 
   // ---------- TV / PROIETTORE ----------
-  s.on('tv:join', async (d, cb) => {
+  on('tv:join', async (d, cb) => {
     if (typeof cb !== 'function') return;
-    const g = games[String(d && d.code || '').toUpperCase()];
+    if (!security.object(d)) return cb({ err: 'Richiesta non valida' });
+    const g = games[security.code(d.code)];
     if (!g) return cb({ err: 'Codice partita non trovato' });
     leaveIdentity();
     s.data = { tv: true, code: g.code };
@@ -288,17 +305,24 @@ io.on('connection', s => {
     sync(g);
   });
 
-  s.on('act', a => {
-    const g = G(); if (!g || !a || typeof a !== 'object' || g.ending) return;
-    liveGame.advance(g);
+  on('act', (a, cb) => {
+    const g = G(); if (!g || !security.object(a) || typeof a.type !== 'string' || g.ending) return answer(cb, liveGame.fail('Comando non valido'));
+    if (staleRound(g, a) || (['correct', 'wrong'].includes(a.type) && a.ans !== undefined && a.ans !== g.ans)) return answer(cb, liveGame.fail('Il turno è già cambiato'));
+    if (!checkRate(s.id, 'act', 60, 1000)) return answer(cb, liveGame.fail('Troppi comandi, attendi un momento'));
+    if (liveGame.advance(g)) sync(g);
     if ((g.live.paused || g.live.countdown || (g.live.applause && !g.live.applause.closed)) && !['kick', 'ban', 'reject', 'approve', 'unban', 'set', 'end', 'newround'].includes(a.type)) return;
-    const P = g.players[a.id];
+    if (['pts', 'kick', 'reject', 'ban', 'unban', 'approve'].includes(a.type) && !security.playerId(a.id)) return answer(cb, liveGame.fail('Destinatario non valido'));
+    const P = g.players[security.playerId(a.id)];
     switch (a.type) {
       case 'start': g.started = true; break;
       case 'open':
         if (g.phase !== 'locked' || !g.started) break;
         if (g.done) liveGame.clearRound(g);
-        if (elig(g)) g.phase = 'open';
+        {
+          const next = g.order.find(o => !g.answered.has(o.id) && liveGame.eligible(g, g.players[o.id]));
+          if (next) { g.ans = next.id; g.phase = 'answering'; io.to('H' + g.code).emit('buzz', { id: rid(8), roundId: g.live.roundId, pid: g.ans }); }
+          else if (elig(g)) g.phase = 'open';
+        }
         break;
       case 'lock': if (g.phase !== 'locked') { g.phase = 'locked'; g.ans = null; g.live.timer = null; } break;
       case 'correct':
@@ -317,7 +341,7 @@ io.on('connection', s => {
           pushUndo(g);
           g.live.timer = null;
           g.answered.add(g.ans);
-          const next = g.order.find(o => !g.answered.has(o.id) && o.id !== g.ans && g.players[o.id]?.sid);
+          const next = g.order.find(o => !g.answered.has(o.id) && o.id !== g.ans && liveGame.eligible(g, g.players[o.id]));
           if (next) {
             g.ans = next.id;
             g.phase = 'answering';
@@ -335,29 +359,41 @@ io.on('connection', s => {
           if (snap.roundId !== g.live.roundId) break;
           g.live.timer = null;
           g.phase = snap.phase;
-          g.ans = snap.ans;
-          g.answered = new Set(snap.answered);
-          g.order = snap.order;
+          g.ans = g.players[snap.ans] ? snap.ans : null;
+          g.answered = new Set(snap.answered.filter(id => g.players[id]));
+          g.order = snap.order.filter(o => g.players[o.id]);
           g.done = snap.done;
           for (const [id, sc] of Object.entries(snap.scores)) {
             if (g.players[id]) g.players[id].score = sc;
+          }
+          if (g.phase === 'answering' && !g.ans) {
+            const next = g.order.find(o => !g.answered.has(o.id) && liveGame.eligible(g, g.players[o.id]));
+            if (next) g.ans = next.id; else after(g);
           }
         }
         break;
       case 'newround': g.live.paused = false; liveGame.clearRound(g); break;
       case 'pts':
         if (P) {
+          if (!Number.isFinite(security.number(a.v))) return answer(cb, liveGame.fail('Punti non validi'));
           pushUndo(g);
-          P.score += Math.max(-99, Math.min(99, Number(a.v) || 0));
+          P.score += Math.max(-99, Math.min(99, security.number(a.v) || 0));
         }
         break;
-      case 'kick': case 'reject': drop(g, a.id, false); break;
-      case 'ban': drop(g, a.id, true); break;
+      case 'kick': case 'reject': drop(g, security.playerId(a.id), false); break;
+      case 'ban': drop(g, security.playerId(a.id), true); break;
       case 'unban': g.banned = g.banned.filter(b => b.id !== a.id); break;
-      case 'approve': if (P) P.st = 'ok'; break;
+      case 'approve':
+        if (P && P.st === 'pending') { P.st = 'ok'; if (P.sid) io.to(P.sid).emit('chat:history', g.chat); }
+        break;
       case 'set':
-        if (['approve', 'joinOpen', 'chat', 'autoReopen'].includes(a.key)) g.set[a.key] = !!a.v;
-        if (a.key === 'pts') g.set.pts = Math.max(1, Math.min(10, parseInt(a.v) || 1));
+        if (['approve', 'joinOpen', 'chat', 'autoReopen'].includes(a.key)) {
+          if (typeof a.v !== 'boolean') return answer(cb, liveGame.fail('Impostazione non valida'));
+          g.set[a.key] = a.v;
+        } else if (a.key === 'pts') {
+          if (!Number.isFinite(security.number(a.v))) return answer(cb, liveGame.fail('Punti non validi'));
+          g.set.pts = Math.max(1, Math.min(10, Math.trunc(security.number(a.v)) || 1));
+        } else return answer(cb, liveGame.fail('Impostazione non valida'));
         break;
       case 'reset':
         pushUndo(g);
@@ -377,77 +413,65 @@ io.on('connection', s => {
           io.to('H' + g.code).emit('ended');
           delete games[g.code];
         }, 12000);
+        answer(cb, liveGame.ok());
         return;
       }
     }
-    sync(g);
+    sync(g); answer(cb, liveGame.ok());
   });
 
   // ---------- GIOCATORI ----------
-  s.on('join', (d, cb) => {
-    if (typeof cb !== 'function') return; d = d || {};
-    const ip = ipOf(s);
-    if (!checkRate(ip, 'join', 15, 60000)) return cb({ err: 'Troppi tentativi, riprova tra un minuto' });
-    const g = games[String(d.code || '').toUpperCase()];
-    if (!g) return cb({ err: 'Codice partita non trovato' });
-    if (g.ending) return cb({ err: 'La partita è terminata' });
-    if (g.banned.some(b => b.id === d.pid)) return cb({ err: 'Sei stato bannato da questa partita' });
-    let p = d.pid && g.players[d.pid];
-    if (p && p.token !== d.token) return cb({ err: 'Credenziali non valide: chiedi all’host di liberare il posto' });
-    if (p && p.token === d.token) {
+  on('join', (d, cb) => {
+    if (typeof cb !== 'function') return;
+    if (!security.object(d)) return cb({ err: 'Richiesta non valida' });
+    const g = games[security.code(d.code)];
+    const reject = err => { const permitted = checkRate(ipOf(s), 'join:fail', 60, 60000); return cb({ err: permitted ? err : 'Troppi tentativi, riprova tra un minuto' }); };
+    if (!g) return reject('Codice partita non trovato');
+    const pid = security.playerId(d.pid);
+    if (d.pid !== undefined && d.pid !== null && d.pid !== '' && !pid) return reject('Credenziali non valide');
+    if (g.banned.some(b => b.id === pid)) return reject('Sei stato bannato da questa partita');
+    let p = pid ? g.players[pid] : Object.values(g.players).find(x => x.sid === s.id);
+    if (pid && (!p || !security.secretEqual(p.token, d.token))) return reject('Credenziali non valide: chiedi all’host di liberare il posto');
+    if (p) {
+      // Valid identities bypass the shared IP failure/new-join limits, including the final podium.
+      if (!checkRate(p.id, 'resume', 60, 10000)) return cb({ err: 'Troppi rientri, attendi un momento' });
       if (p.sid && p.sid !== s.id) {
         const old = io.sockets.sockets.get(p.sid);
         if (old) { old.leave('P' + g.code); old.data = {}; old.emit('session:replaced'); }
       }
+    } else {
+      if (g.ending) return reject('La partita è terminata');
+      if (!checkRate(ipOf(s), 'join:new', 120, 60000)) return cb({ err: 'Troppi ingressi, riprova tra un minuto' });
+      const nick = normNick(security.text(d.nick, 128));
+      if (!nick) return reject('Scegli un nome per il gruppo');
+      if (reserved.includes(nick.toLowerCase())) return reject('Questo nome è riservato');
+      if (g.banned.some(b => b.nick.toLowerCase() === nick.toLowerCase())) return reject('Questo nome è bannato');
+      if (Object.values(g.players).some(x => x.nick.toLowerCase() === nick.toLowerCase())) return reject('Nome già usato da un altro gruppo (chiedi all’host di liberarlo se ti sei disconnesso)');
+      if (!g.set.joinOpen) return reject('Gli ingressi sono chiusi');
+      let avatar, avatarData;
+      if (d.avatar !== undefined && d.avatar !== null && d.avatar !== '') {
+        avatar = validateAvatar(d.avatar);
+        if (!avatar) return reject('Immagine non valida: usa una foto JPG, PNG o WebP fino a 1024 pixel e 100 KB');
+      } else avatarData = letterAvatar(nick);
+      let id; do { id = rid(4); } while (g.players[id]);
+      p = { id, token: rid(24), nick, avatarData, avatarBytes: avatar?.bytes, avatarMime: avatar?.mime,
+        avatar: `/avatar/${g.code}/${id}`, score: 0, st: g.set.approve ? 'pending' : 'ok', sid: s.id };
+      g.players[p.id] = p;
     }
-    else {
-      // Idempotenza per stesso socket
-      if (!p) {
-        const existing = Object.values(g.players).find(x => x.sid === s.id);
-        if (existing) { p = existing; }
-      }
-      if (!p) {
-        const nick = normNick(String(d.nick || ''));
-        if (!nick) return cb({ err: 'Scegli un nome per il gruppo' });
-        if (reserved.includes(nick.toLowerCase())) return cb({ err: 'Questo nome è riservato' });
-        if (g.banned.some(b => b.nick.toLowerCase() === nick.toLowerCase())) return cb({ err: 'Questo nome è bannato' });
-        if (Object.values(g.players).some(x => x.nick.toLowerCase() === nick.toLowerCase())) return cb({ err: 'Nome già usato da un altro gruppo (chiedi all’host di liberarlo se ti sei disconnesso)' });
-        if (!g.set.joinOpen) return cb({ err: 'Gli ingressi sono chiusi' });
-        let avatarData = d.avatar;
-        if (avatarData) {
-          if (typeof avatarData !== 'string' || avatarData.length > 400000 || !IMG_URI.test(avatarData)) return cb({ err: 'Immagine non valida, riprova o entra senza' });
-          if (avatarData.length > 140000) return cb({ err: 'Immagine troppo grande, riprova con una foto più piccola' });
-        } else {
-          avatarData = letterAvatar(nick);
-        }
-        const pid = rid(4);
-        p = {
-          id: pid,
-          token: rid(12),
-          nick,
-          avatarData,
-          avatar: `/avatar/${g.code}/${pid}`,
-          score: 0,
-          st: g.set.approve ? 'pending' : 'ok',
-          sid: s.id
-        };
-        g.players[p.id] = p;
-      }
-    }
-    leaveIdentity();
-    p.sid = s.id;
+    leaveIdentity(); p.sid = s.id;
     s.data = { code: g.code, pid: p.id }; s.join('P' + g.code);
-    cb({ code: g.code, pid: p.id, token: p.token, hist: g.chat }); sync(g);
+    cb({ code: g.code, pid: p.id, token: p.token, hist: p.st === 'ok' ? g.chat : [], final: g.final || null }); sync(g);
   });
 
   // A press is acknowledged independently of the host sound. Server order never waits on effects.
-  s.on('buzz', (d, cb) => {
+  on('buzz', (d, cb) => {
     if (typeof d === 'function') { cb = d; d = {}; }
+    if (d === undefined) d = {};
     request('buzz', d, cb, input => {
       const { g, p } = playerIdentity();
       if (!g || !p) return liveGame.fail('Non sei connesso alla stanza');
       if (liveGame.advance(g)) sync(g);
-      if (input.roundId && input.roundId !== g.live.roundId) return liveGame.fail('Questa manche è terminata');
+      if (staleRound(g, input)) return liveGame.fail('Questa manche è terminata');
       if (!g.started || g.ending || g.live.paused || g.live.countdown || g.phase === 'locked' || (g.live.applause && !g.live.applause.closed)) return liveGame.fail(g.live.paused ? 'Partita in pausa' : 'Le prenotazioni sono chiuse');
       if (!liveGame.eligible(g, p)) return liveGame.fail('In questo duello sei spettatore');
       if (g.answered.has(p.id) || g.order.some(o => o.id === p.id)) return liveGame.fail('Hai già prenotato in questa manche');
@@ -463,16 +487,18 @@ io.on('connection', s => {
     });
   });
 
-  s.on('live:act', (d, cb) => request('live:act', d, cb, input => {
+  on('live:act', (d, cb) => request('live:act', d, cb, input => {
     const g = G(); if (!g) return liveGame.fail('Comando riservato all’host');
+    if (staleRound(g, input)) return liveGame.fail('Questa manche è terminata');
     if (liveGame.advance(g)) sync(g);
     if (!checkRate(s.id, 'live', 30, 1000)) return liveGame.fail('Troppi comandi, attendi un momento');
     const result = liveGame.action(g, input); if (result.ok) sync(g); return result;
   }));
 
-  s.on('host:effect', (d, cb) => request('host:effect', d, cb, input => {
+  on('host:effect', (d, cb) => request('host:effect', d, cb, input => {
     const g = G(); if (!g || g.ending) return liveGame.fail('Comando riservato all’host');
-    const p = g.players[input.pid];
+    if (staleRound(g, input)) return liveGame.fail('Questa manche è terminata');
+    const p = g.players[security.playerId(input.pid)];
     if (!p || p.st !== 'ok' || !p.sid) return liveGame.fail('Il destinatario non è connesso');
     if (!['reaction', 'sound', 'message', 'presence'].includes(input.kind)) return liveGame.fail('Effetto non valido');
     if (input.kind === 'reaction' && !liveGame.REACTIONS.includes(input.value)) return liveGame.fail('Reazione non valida');
@@ -489,17 +515,17 @@ io.on('connection', s => {
     return liveGame.ok({ id: effect.id });
   }));
 
-  s.on('presence:reply', (d, cb) => request('presence:reply', d, cb, input => {
+  on('presence:reply', (d, cb) => request('presence:reply', d, cb, input => {
     const { g, p } = playerIdentity();
     if (!p || !p.presence || p.presence.id !== input.id || p.presence.expiresAt < Date.now()) return liveGame.fail('Richiesta di presenza scaduta');
     const confirmation = { id: input.id, pid: p.id, nick: p.nick };
     p.presence = null; sync(g);
     // TV clients must not receive these private confirmations.
-    for (const socket of io.sockets.sockets.values()) if (socket.data.host && socket.data.code === g.code) socket.emit('presence:confirmed', confirmation);
+    emitHosts(g, 'presence:confirmed', confirmation);
     return liveGame.ok();
   }));
 
-  s.on('applause:react', (d, cb) => request('applause:react', d, cb, input => {
+  on('applause:react', (d, cb) => request('applause:react', d, cb, input => {
     const { g, p } = playerIdentity();
     if (!p) return liveGame.fail('Non sei connesso alla stanza');
     if (liveGame.advance(g)) sync(g);
@@ -513,20 +539,21 @@ io.on('connection', s => {
   }));
 
   // chat: giocatori e host
-  s.on('chat', m => {
+  on('chat', m => {
     const now = Date.now();
     if (s.data._lastChat && now - s.data._lastChat < 1000) return;
     s.data._lastChat = now;
-    const g = games[s.data.code]; if (!g || !m || !g.set.chat || g.ending) return;
+    const g = games[s.data.code]; if (!g || !security.object(m) || !g.set.chat || g.ending) return;
     let id = 'host', nick = 'Host';
     if (!s.data.host) { const p = g.players[s.data.pid]; if (!p || p.st !== 'ok' || p.sid !== s.id) return; id = p.id; nick = p.nick; }
-    const out = { id, nick, text: String(m.text || '').slice(0, 200), anim: getStickers().includes(m.anim) ? m.anim : null };
+    const out = { id, nick, text: security.text(m.text, 200), anim: getStickers().includes(m.anim) ? m.anim : null };
     if (!out.text && !out.anim) return;
     g.chat.push(out); if (g.chat.length > 40) g.chat.shift();
-    io.to('P' + g.code).to('H' + g.code).emit('chat', out);
+    emitHosts(g, 'chat', out);
+    for (const player of Object.values(g.players)) if (player.st === 'ok' && player.sid) io.to(player.sid).emit('chat', out);
   });
 
-  s.on('disconnect', () => {
+  on('disconnect', () => {
     const g = games[s.data.code], p = g && g.players[s.data.pid];
     if (p && p.sid === s.id) { p.sid = null; sync(g); }
   });
@@ -548,7 +575,7 @@ setInterval(() => {
 
 // Optional isolated add-on: no access to the quiz rooms or events.
 if (process.env.AFTERPARTY_ENABLED !== 'false') {
-  require('./plugins/afterparty')(io, { password: HOST_PASS });
+  require('./plugins/afterparty')(io, { password: HOST_PASS, configured: configuredAfterparty });
   app.get('/afterparty/qr/:code', async (req, res) => {
     if (!/^[A-F0-9]{6}$/.test(req.params.code)) return res.sendStatus(400);
     try {

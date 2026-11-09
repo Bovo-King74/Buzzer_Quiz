@@ -1,0 +1,90 @@
+{
+  "downloaded": "2026-11-08",
+  "cssSource": "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;700&family=Dela+Gothic+One&display=swap",
+  "license": "SIL Open Font License 1.1",
+  "coverage": "Bricolage: latin, latin-ext, vietnamese. Dela: latin, latin-ext, vietnamese, greek, cyrillic. Other scripts use existing system fallbacks.",
+  "fonts": [
+    {
+      "file": "bricolage-grotesque-vietnamese.woff2",
+      "source": "https://fonts.gstatic.com/s/bricolagegrotesque/v9/3y9H6as8bTXq_nANBjzKo3IeZx8z6up5BeSl5jBNz_19PpbpMXuECpwUxJBOm_OJWiawDFXphjhQYrcK.woff2",
+      "bytes": 8652,
+      "sha256": "ea16948d4a91b77221f119ad27d4ac7a7581c98cf990712047f89a531a49ef28",
+      "contentType": "font/woff2",
+      "httpStatus": 200
+    },
+    {
+      "file": "bricolage-grotesque-latin-ext.woff2",
+      "source": "https://fonts.gstatic.com/s/bricolagegrotesque/v9/3y9H6as8bTXq_nANBjzKo3IeZx8z6up5BeSl5jBNz_19PpbpMXuECpwUxJBOm_OJWiawDVXphjhQYrcK.woff2",
+      "bytes": 18740,
+      "sha256": "a22c997a894377f36d81c904163e0c05fbbcd32f0ca2e7beedb86b39be1296a1",
+      "contentType": "font/woff2",
+      "httpStatus": 200
+    },
+    {
+      "file": "bricolage-grotesque-latin.woff2",
+      "source": "https://fonts.gstatic.com/s/bricolagegrotesque/v9/3y9H6as8bTXq_nANBjzKo3IeZx8z6up5BeSl5jBNz_19PpbpMXuECpwUxJBOm_OJWiawA1XphjhQYg.woff2",
+      "bytes": 41236,
+      "sha256": "4fd48b2c1ab27220e71f15f990550261b35245c3bdfd8d8025b4bdac0459ee2d",
+      "contentType": "font/woff2",
+      "httpStatus": 200
+    },
+    {
+      "file": "dela-gothic-one-cyrillic.woff2",
+      "source": "https://fonts.gstatic.com/s/delagothicone/v19/hESp6XxvMDRA-2eD0lXpDa6QkBA2RkEIYgpLUTOw.woff2",
+      "bytes": 7256,
+      "sha256": "ec50989fd6bdb5f068f60c7e61cfbfc6b5d347083f039842db4325698d3f1519",
+      "contentType": "font/woff2",
+      "httpStatus": 200
+    },
+    {
+      "file": "dela-gothic-one-greek.woff2",
+      "source": "https://fonts.gstatic.com/s/delagothicone/v19/hESp6XxvMDRA-2eD0lXpDa6QkBA2QUEIYgpLUTOw.woff2",
+      "bytes": 5232,
+      "sha256": "6996e8f51585b15ec57d2779fe894e6a5b949576a86080598fa0a31a0cca348e",
+      "contentType": "font/woff2",
+      "httpStatus": 200
+    },
+    {
+      "file": "dela-gothic-one-vietnamese.woff2",
+      "source": "https://fonts.gstatic.com/s/delagothicone/v19/hESp6XxvMDRA-2eD0lXpDa6QkBA2TUEIYgpLUTOw.woff2",
+      "bytes": 4808,
+      "sha256": "567b211e02921fd10f09f317b5d99a02b7217de24f5d071fe6d2554bc5578233",
+      "contentType": "font/woff2",
+      "httpStatus": 200
+    },
+    {
+      "file": "dela-gothic-one-latin-ext.woff2",
+      "source": "https://fonts.gstatic.com/s/delagothicone/v19/hESp6XxvMDRA-2eD0lXpDa6QkBA2TEEIYgpLUTOw.woff2",
+      "bytes": 9040,
+      "sha256": "33dd99b92499f2084f94fee3ae5636af3c8c6b91171982868d360b92cd5ed076",
+      "contentType": "font/woff2",
+      "httpStatus": 200
+    },
+    {
+      "file": "dela-gothic-one-latin.woff2",
+      "source": "https://fonts.gstatic.com/s/delagothicone/v19/hESp6XxvMDRA-2eD0lXpDa6QkBA2QkEIYgpLUQ.woff2",
+      "bytes": 13800,
+      "sha256": "6727f9af857ee205dcd69421e686f34bf23ae8b697c11540eca08a740d4e5e1e",
+      "contentType": "font/woff2",
+      "httpStatus": 200
+    }
+  ],
+  "licenses": [
+    {
+      "file": "BricolageGrotesque-OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/6ce172f74aa355ea43eb964fa4a91570a4d3064d/ofl/bricolagegrotesque/OFL.txt",
+      "commit": "6ce172f74aa355ea43eb964fa4a91570a4d3064d",
+      "bytes": 4403,
+      "sha256": "4b5a7d8f37f5602621c8a8d7358a6a2e71317e6c231c661e15aef0275d3e07ba",
+      "httpStatus": 200
+    },
+    {
+      "file": "DelaGothicOne-OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/690b65d64dabaebf9d18e2d7e8c8e7e02b4cccaf/ofl/delagothicone/OFL.txt",
+      "commit": "690b65d64dabaebf9d18e2d7e8c8e7e02b4cccaf",
+      "bytes": 4392,
+      "sha256": "c0014792d4f4abc0508c295b277f2b17ae44465c8dc88d12af9cea48279b5fda",
+      "httpStatus": 200
+    }
+  ]
+}

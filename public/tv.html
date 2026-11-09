@@ -5,7 +5,7 @@
 <link rel="icon" type="image/png" sizes="48x48" href="/assets/icons8-cicalino-48.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Schermo TV · Quiz animazione</title>
-<link rel="stylesheet" href="/style.css?v=clean-20261104">
+<link rel="stylesheet" href="/style.css?v=20261108">
 <style>
 body { background: var(--blu); color: var(--gesso); min-height: 100dvh; display: flex; flex-direction: column; overflow-x: hidden; }
 #tv-join { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 20px; }
@@ -53,10 +53,11 @@ body { background: var(--blu); color: var(--gesso); min-height: 100dvh; display:
 #podlist .rg { background: var(--gesso); color: var(--nero); margin-bottom: 12px; font-size: 24px; border: 4px solid var(--nero); box-shadow: 6px 6px 0 var(--nero); }
 </style>
 <link rel="stylesheet" href="/refresh.css?v=clean-20261104">
-<link rel="stylesheet" href="/experience.css?v=20261105">
+<link rel="stylesheet" href="/experience.css?v=20261108">
 <link rel="stylesheet" href="/live-ui.css?v=20261105">
-<script src="/experience.js?v=20261105"></script>
-<script src="/live-ui.js?v=20261105"></script>
+<script src="/experience.js?v=20261108"></script>
+<script src="/live-ui.js?v=20261108"></script>
+<link rel="stylesheet" href="/studio.css?v=20261108">
 </head>
 <body>
 
@@ -138,6 +139,7 @@ function connectTv(code) {
     }
     $('#tv-join').hidden = true;
     $('#tv-screen').hidden = false;
+    if (r.final) showFinal(r.final);
   });
 }
 
@@ -147,22 +149,21 @@ $('#tvf').onsubmit = e => {
   if (c) connectTv(c);
 };
 
-if (currentCode) {
-  $('#tvc').value = currentCode;
-  s.on('connect', () => connectTv(currentCode));
-}
+if (currentCode) $('#tvc').value = currentCode;
+s.on('connect', () => { if (currentCode) connectTv(currentCode); });
 
 s.on('state', st => {
   ST = st;
   renderTv();
 });
 
-s.on('final', list => {
+function showFinal(list) {
   $('#podlist').innerHTML = list.slice(0, 10).map((p, i) =>
     `<div class="rg"><span class="rk">${['🥇','🥈','🥉'][i] || (i+1)}</span><img class="av" src="${p.avatar}" alt=""><span class="nm">${esc(p.nick)}</span><span class="sc">${p.score}</span></div>`
   ).join('');
   $('#podium').hidden = false;
-});
+}
+s.on('final', showFinal);
 
 function renderTv() {
   if (!ST) return;

@@ -222,7 +222,13 @@
     refresh,
     status: () => ({ shader: shaderState, glass: instances.size, role: role(), video: document.getElementById('menu-video')?.dataset.visualPlayback || 'absent', webgl: webglSupport })
   };
-  document.addEventListener('buzzer:preferences', refresh);
+  const visualPreferenceKeys = ['theme', 'highContrast', 'textSize', 'backgrounds', 'reduceTransparency', 'motion', 'focusMode', 'buzzerColor'];
+  const visualPreferenceSignature = () => JSON.stringify(visualPreferenceKeys.map(key => preferences()[key]));
+  let previousVisualPreferences = visualPreferenceSignature();
+  document.addEventListener('buzzer:preferences', () => {
+    const next = visualPreferenceSignature();
+    if (next !== previousVisualPreferences) { previousVisualPreferences = next; refresh(); }
+  });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { ++refreshVersion; stopShader(); clearGlass(); const video = document.getElementById('menu-video'); if (video) { video.pause(); video.dataset.visualPlayback = 'poster'; } }
     else refresh();

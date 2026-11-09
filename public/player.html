@@ -4,19 +4,20 @@
 <meta charset="utf-8">
 <link rel="icon" type="image/png" sizes="48x48" href="/assets/icons8-cicalino-48.png">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Quiz animazione</title>
-<link rel="stylesheet" href="/style.css?v=clean-20261104">
+<title>Buzzer · Il quiz dal vivo</title>
+<link rel="stylesheet" href="/style.css?v=20261108">
 <link rel="stylesheet" href="/refresh.css?v=clean-20261104">
-<link rel="stylesheet" href="/experience.css?v=20261105">
+<link rel="stylesheet" href="/experience.css?v=20261108">
 <link rel="stylesheet" href="/live-ui.css?v=20261105">
-<script src="/experience.js?v=20261105"></script>
-<script src="/live-ui.js?v=20261105"></script>
+<script src="/experience.js?v=20261108"></script>
+<script src="/live-ui.js?v=20261108"></script>
 <link rel="stylesheet" href="/profile.css?v=20261106">
-<link rel="stylesheet" href="/app-shell.css?v=20261106">
+<link rel="stylesheet" href="/app-shell.css?v=20261108">
 <link rel="stylesheet" href="/visuals.css?v=20261106">
 <script src="/profile.js?v=20261106"></script>
-<script src="/app-shell.js?v=20261106"></script>
-<script src="/visuals.js?v=20261106" defer></script>
+<script src="/app-shell.js?v=20261108"></script>
+<script src="/visuals.js?v=20261108" defer></script>
+<link rel="stylesheet" href="/studio.css?v=20261108">
 </head>
 <body class="pl" data-view="menu">
 <div id="net" role="alert" hidden>Connessione persa… riconnessione</div>
@@ -24,7 +25,7 @@
 <section id="start-menu" class="start-menu" aria-labelledby="menu-title">
   <div class="menu-copy"><p class="menu-signature">Una serata. Tutte le squadre.</p><h1 id="menu-title">Il prossimo punto<br>è tutto vostro.</h1><p class="menu-intro">Il quiz comincia qui. Scegli una stanza, prepara la squadra e tieni pronto il buzzer.</p>
     <nav class="menu-actions" aria-label="Come vuoi giocare?">
-      <a id="menu-join" class="menu-primary" href="#join"><span>Entra in una stanza</span><span aria-hidden="true">↗</span></a>
+      <a id="menu-join" class="menu-primary" href="#join"><span>Entra in una stanza<small>Hai un codice? Porta la tua squadra in gioco</small></span><span aria-hidden="true">↗</span></a>
       <button id="menu-create" type="button"><span>Crea una stanza<small>Inizia una partita e invita le squadre</small></span><span aria-hidden="true">＋</span></button>
       <a id="menu-host" href="/host.html#resume"><span>Entra come host<small>Riprendi la regia con codice e chiave host</small></span><span aria-hidden="true">→</span></a>
     </nav><p id="menu-status" role="status"></p>
@@ -41,7 +42,7 @@
   <label>Codice partita<input id="c" placeholder="ABCD" maxlength="4" autocapitalize="characters" autocomplete="off" inputmode="text" enterkeyhint="next"></label>
   <label>Nome del gruppo<input id="n" placeholder="Come si chiama la squadra?" maxlength="16" autocomplete="off" enterkeyhint="go"></label>
   <label class="selfie">Selfie del gruppo <small>(facoltativo)</small>
-    <input id="f" type="file" accept="image/*" capture="user" hidden aria-label="Carica selfie del gruppo">
+    <input id="f" type="file" accept="image/*" capture="user" class="team-photo-input" aria-label="Carica selfie del gruppo">
     <span id="ph">Tocca per scattare, oppure salta: useremo l’iniziale del nome</span>
     <img id="pv" alt="" hidden>
   </label>
@@ -59,17 +60,17 @@
 
   <div id="zone" data-m="locked">
     <div data-shader-stage aria-hidden="true"></div>
-    <button id="bz" disabled aria-label="Buzzer"><img src="assets/buzzer.png" alt=""><span class="buzzer-state" aria-hidden="true">Chiuso</span></button>
+    <button id="bz" disabled aria-label="Buzzer"><span class="buzzer-face" aria-hidden="true"><span>BUZZ</span></span><span class="buzzer-state" aria-hidden="true">Chiuso</span></button>
     <h2 id="lb" aria-live="polite"></h2>
     <p id="sb" aria-live="polite"></p>
     <button id="chb">Chat<i id="dot" hidden></i></button>
   </div>
 
-  <div id="chat" hidden role="dialog" aria-label="Chat">
+  <div id="chat" hidden role="dialog" aria-modal="true" aria-label="Chat">
     <div class="hd"><h2 style="font-size:24px">Chat</h2><button id="cx">Chiudi</button></div>
     <div class="log" id="log"></div>
     <div class="stk" id="stk"></div>
-    <div class="cin"><input id="ct" maxlength="200" placeholder="Scrivi qualcosa"><button class="ok" id="cs">Invia</button></div>
+    <div class="cin"><input id="ct" maxlength="200" placeholder="Scrivi qualcosa" aria-label="Messaggio chat"><button class="ok" id="cs">Invia</button></div>
   </div>
 
   <div id="podium" hidden>
@@ -98,12 +99,14 @@ $('#c').value = urlCode || (cred && cred.code) || '';
 /* selfie ridotto a 200x200 prima dell'invio */
 $('#f').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
+  if (!f.type.startsWith('image/') || f.size > 10 * 1024 * 1024) { $('#err').textContent = 'Scegli un’immagine fino a 10 MB.'; e.target.value = ''; return; }
   const i = new Image(), u = URL.createObjectURL(f);
-  i.onerror = () => { URL.revokeObjectURL(u); avatar = null; $('#err').textContent = 'Non riesco a leggere questa foto, riprova o entra senza.'; };
+  i.onerror = () => { URL.revokeObjectURL(u); avatar = null; $('#pv').hidden = true; $('#ph').hidden = false; $('#err').textContent = 'Non riesco a leggere questa foto, riprova o entra senza.'; };
   i.onload = () => {
     URL.revokeObjectURL(u); $('#err').textContent = '';
     const c = document.createElement('canvas'), m = Math.min(i.width, i.height); c.width = c.height = 200;
-    c.getContext('2d').drawImage(i, (i.width - m) / 2, (i.height - m) / 2, m, m, 0, 0, 200, 200);
+    const context = c.getContext('2d'); context.fillStyle = '#fffef8'; context.fillRect(0, 0, 200, 200);
+    context.drawImage(i, (i.width - m) / 2, (i.height - m) / 2, m, m, 0, 0, 200, 200);
     avatar = c.toDataURL('image/jpeg', .72); $('#pv').src = avatar; $('#pv').hidden = false; $('#ph').hidden = true;
   };
   i.src = u;
@@ -122,7 +125,7 @@ function join(d) {
       BuzzerShell.playerOut(); return;
     }
     cred = { code: r.code, pid: r.pid, token: r.token }; localStorage.qz = JSON.stringify(cred);
-    BuzzerShell.playerJoined(); $('#log').innerHTML = ''; r.hist.forEach(addMsg); awake();
+    BuzzerShell.playerJoined(); $('#log').innerHTML = ''; r.hist.forEach(addMsg); awake(); if (r.final) showFinal(r.final);
   });
 }
 
@@ -138,20 +141,21 @@ const out = msg => { localStorage.removeItem('qz'); cred = null; BuzzerShell.pla
 s.on('kicked', () => out('Sei stato espulso. Puoi rientrare con il codice.'));
 s.on('banned', () => out('Sei stato bannato dalla partita.'));
 s.on('session:replaced', () => out('La squadra è collegata da un altro dispositivo.'));
-s.on('ended', () => out('La partita è terminata.'));
+s.on('ended', () => { if ($('#podium').hidden) out('La partita è terminata.'); else { localStorage.removeItem('qz'); cred = null; } });
 
 // T-11: Schermata finale con podio
-s.on('final', list => {
+function showFinal(list) {
   $('#podlist').innerHTML = list.slice(0, 10).map((p, i) =>
     `<div class="rg"><span class="rk">${['🥇','🥈','🥉'][i] || (i+1)}</span><img class="av" src="${p.avatar}" alt=""><span class="nm">${esc(p.nick)}</span><span class="sc">${p.score}</span></div>`
   ).join('');
   $('#podium').hidden = false;
-});
+}
+s.on('final', showFinal);
 
 /* stati del buzzer */
 const T = {
   lobby: ['Siete dentro', 'Aspettate che l’host avvii il gioco.'],
-  locked: ['Votazioni bloccate', 'Aspetta che l’host le apra.'],
+  locked: ['Buzzer bloccato', 'Aspetta il via dell’host.'],
   open: ['Premi!', 'Il primo che preme risponde.'],
   answering: ['Tocca a voi', 'Rispondete ora. Aspettate il verdetto.'],
   waiting: ['Attendi', ''],
@@ -192,6 +196,7 @@ function pressBuzzer() {
   const sequence = ++buzzSequence, roundId = me.live?.roundId;
   BuzzerUX.unlock().then(() => BuzzerUX.play('press', { channel: 'buzz' }));
   $('#bz').classList.add('down'); $('#bz').disabled = true;
+  document.querySelector('.buzzer-state').textContent = 'Premuto';
   $('#lb').textContent = 'Pressione inviata';
   $('#sb').textContent = 'Attendo la conferma del server…';
   s.timeout(4000).emit('buzz', { roundId, requestId: window.crypto?.randomUUID?.() || `${Date.now()}-${sequence}` }, (error, result) => {
@@ -204,6 +209,7 @@ function pressBuzzer() {
       return;
     }
     if (!result?.ok) {
+      BuzzerUX.setState(me.live, me.mode);
       $('#lb').textContent = 'Prenotazione non accettata';
       $('#sb').textContent = result?.error || 'Il round è chiuso o hai già premuto.';
       $('#bz').disabled = me.mode !== 'open' || !s.connected;
@@ -223,9 +229,9 @@ const net = () => {
   $('#net').hidden = s.connected;
   document.body.classList.toggle('off', !s.connected);
   if (!s.connected) {
-    $('#lb').textContent = 'Non connesso';
-    $('#sb').textContent = 'Riconnessione in corso…';
-    $('#bz').disabled = true; pendingBuzz = false; ++buzzSequence;
+    $('#lb').textContent = 'Connessione persa';
+    $('#sb').textContent = 'Sto provando a rientrare. Il buzzer è temporaneamente bloccato.';
+    $('#bz').disabled = true; document.querySelector('.buzzer-state').textContent = 'Offline'; pendingBuzz = false; ++buzzSequence;
   }
 };
 s.on('disconnect', net); s.on('connect_error', net); s.on('connect', net);
@@ -234,24 +240,28 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 
 /* chat */
 fetch('/api/anims').then(r => r.json()).then(l => {
-  $('#stk').innerHTML = l.map(f => `<img src="assets/anim/${encodeURIComponent(f)}" data-f="${esc(f)}" alt="">`).join('');
+  $('#stk').innerHTML = l.map(f => `<button type="button" data-f="${esc(f)}" aria-label="Adesivo ${esc(f.replace(/\.[^.]+$/, ''))}" aria-pressed="false"><img loading="lazy" src="assets/anim/${encodeURIComponent(f)}" alt=""></button>`).join('');
 });
 function addMsg(m) {
   const d = document.createElement('div'); d.className = 'msg' + (m.id === me.id ? ' me' : '');
   d.innerHTML = `<b>${esc(m.nick)}</b>${esc(m.text)}${m.anim ? `<img src="assets/anim/${encodeURIComponent(m.anim)}" alt="">` : ''}`;
   const l = $('#log'); l.append(d); l.scrollTop = l.scrollHeight;
 }
+s.on('chat:history', list => { if (!Array.isArray(list)) return; $('#log').innerHTML = ''; list.forEach(addMsg); });
 s.on('chat', m => { addMsg(m); if ($('#chat').hidden && m.id !== me.id) $('#dot').hidden = false; });
-$('#chb').onclick = () => { $('#chat').hidden = false; $('#dot').hidden = true; const l = $('#log'); l.scrollTop = l.scrollHeight; };
-$('#cx').onclick = () => $('#chat').hidden = true;
+let chatFocus;
+$('#chb').onclick = () => { chatFocus = document.activeElement; $('#chat').hidden = false; $('#cx').focus(); $('#dot').hidden = true; const l = $('#log'); l.scrollTop = l.scrollHeight; };
+function closeChat() { $('#chat').hidden = true; (chatFocus?.isConnected ? chatFocus : $('#chb')).focus(); }
+$('#cx').onclick = closeChat;
+$('#chat').addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); closeChat(); } if(e.key === 'Tab') { const a=[...$('#chat').querySelectorAll('button,input,[tabindex="0"]')].filter(x=>!x.disabled&&x.getClientRects().length); if(e.shiftKey&&document.activeElement===a[0]){e.preventDefault();a.at(-1)?.focus();}else if(!e.shiftKey&&document.activeElement===a.at(-1)){e.preventDefault();a[0]?.focus();} } });
 $('#stk').onclick = e => {
-  const i = e.target.closest('img'); if (!i) return; pick = pick === i.dataset.f ? null : i.dataset.f;
-  document.querySelectorAll('#stk img').forEach(x => x.classList.toggle('on', x.dataset.f === pick));
+  const i = e.target.closest('button[data-f]'); if (!i) return; pick = pick === i.dataset.f ? null : i.dataset.f;
+  document.querySelectorAll('#stk button').forEach(x => { const selected = x.dataset.f === pick; x.classList.toggle('on', selected); x.setAttribute('aria-pressed', String(selected)); });
 };
 const send = () => {
   const t = $('#ct').value.trim(); if (!t && !pick) return;
   openChatEasterEgg(t); s.emit('chat', { text: t, anim: pick }); $('#ct').value = ''; pick = null;
-  document.querySelectorAll('#stk img').forEach(x => x.classList.remove('on'));
+  document.querySelectorAll('#stk button').forEach(x => { x.classList.remove('on'); x.setAttribute('aria-pressed', 'false'); });
 };
 $('#cs').onclick = send;
 $('#ct').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); send(); } };

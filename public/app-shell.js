@@ -56,11 +56,12 @@
     const left = document.createElement('div'); left.className = 'shell-left';
     const settings = $('ux-settings');
     if (settings) { settings.classList.add('buzzer-glass'); settings.dataset.glass = 'settings'; left.append(settings); }
-    const home = document.createElement('a'); home.className = 'shell-home'; home.href = '/player.html#menu'; home.textContent = 'Buzzer';
+    const home = document.createElement('a'); home.className = 'shell-home'; home.href = '/player.html#menu'; home.innerHTML = '<span>Buzzer</span><span class="studio-signal"><i aria-hidden="true"></i><span>Studio live</span></span>';
     const profile = document.createElement('div'); profile.dataset.profileSlot = '';
     header.append(left, home, profile); document.body.prepend(header);
     window.BuzzerProfile?.mount(profile);
     document.dispatchEvent(new Event('buzzer:shell-ready'));
+    for (const [id, icon] of [['menu-join','users'],['menu-create','play'],['menu-host','connection']]) { const button=$(id); if(button) { const mark=document.createElement('span'); mark.className='menu-action-icon'; mark.setAttribute('aria-hidden','true'); mark.innerHTML=window.BuzzerUX?.icon(icon)||''; button.prepend(mark); } }
     document.querySelectorAll('.hostbtn').forEach(element => element.remove());
     if ($('menu-create')) $('menu-create').onclick = () => createRoom(playerSocket, $('menu-create'), $('menu-status'), () => location.assign('/host.html?created=1'));
     const invitation = new URLSearchParams(location.search).get('c');

@@ -1,4 +1,109 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;700&family=Dela+Gothic+One&display=swap');
+/* Bricolage Grotesque · vietnamese */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url(/assets/fonts/bricolage-grotesque-vietnamese.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* Bricolage Grotesque · latin-ext */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url(/assets/fonts/bricolage-grotesque-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* Bricolage Grotesque · latin */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 400;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url(/assets/fonts/bricolage-grotesque-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* Bricolage Grotesque · vietnamese */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url(/assets/fonts/bricolage-grotesque-vietnamese.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* Bricolage Grotesque · latin-ext */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url(/assets/fonts/bricolage-grotesque-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* Bricolage Grotesque · latin */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url(/assets/fonts/bricolage-grotesque-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* Dela Gothic One · cyrillic */
+@font-face {
+  font-family: 'Dela Gothic One';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/assets/fonts/dela-gothic-one-cyrillic.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* Dela Gothic One · greek */
+@font-face {
+  font-family: 'Dela Gothic One';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/assets/fonts/dela-gothic-one-greek.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* Dela Gothic One · vietnamese */
+@font-face {
+  font-family: 'Dela Gothic One';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/assets/fonts/dela-gothic-one-vietnamese.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* Dela Gothic One · latin-ext */
+@font-face {
+  font-family: 'Dela Gothic One';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/assets/fonts/dela-gothic-one-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* Dela Gothic One · latin */
+@font-face {
+  font-family: 'Dela Gothic One';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/assets/fonts/dela-gothic-one-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 
 :root{--blu:#1f2bff;--gesso:#fffdf5;--nero:#000;--giallo:#ffe500;--magenta:#ff2fa0;--teal:#00c9b7;--cemento:#c9c9c4}
 *{box-sizing:border-box;margin:0;border-radius:0}
@@ -76,7 +181,7 @@ input,select{width:100%;background:var(--gesso);color:var(--nero);border:3px sol
 .msg img{width:160px;max-width:100%;margin-top:4px;border:3px solid var(--nero)}
 .stk{display:flex;gap:8px;overflow-x:auto;padding:8px 10px;border-top:3px solid var(--nero);background:var(--cemento)}
 .stk img{width:56px;height:56px;object-fit:cover;border:3px solid var(--nero);cursor:pointer;flex:none}
-.stk img.on{border-color:var(--magenta);outline:3px solid var(--magenta)}
+
 .cin{display:flex;gap:8px;padding:10px;border-top:3px solid var(--nero)}
 
 
@@ -108,7 +213,7 @@ body.pl{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
 #zone h2{font-size:clamp(38px,12vw,76px)}
 #zone p{font-size:18px;font-weight:700;max-width:22ch}
 #bz{--d:max(140px, min(72vw, 44dvh));width:var(--d);height:var(--d);flex:none;aspect-ratio:1;align-self:center;border-radius:50%;border:6px solid var(--nero);padding:0;background:radial-gradient(circle at 50% 38%,#fff 0 55%,var(--magenta) 56%);box-shadow:0 12px 0 var(--nero);overflow:hidden;margin-bottom:10px}
-#bz img{width:100%;height:100%;object-fit:contain}
+
 #bz:active:not(:disabled){transform:translateY(12px);box-shadow:0 0 0 var(--nero)}
 #bz:disabled{opacity:1;filter:grayscale(1) contrast(.8);box-shadow:0 4px 0 var(--nero)}
 #zone[data-m=open] #bz{animation:pulsa 1.1s steps(2,jump-none) infinite}
@@ -176,63 +281,14 @@ body.pl{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
 #lobby .rg{grid-template-columns:52px minmax(0,1fr) auto}
 #lobby .rk,#lobby .sc{display:none}
 
-/* =====================================================================
-   SFONDI ANIMATI  (solo CSS, nessuna immagine)
-   Ogni schermata ha un livello ::before sotto i contenuti (z-index -1).
-   Si muove solo con transform / una variabile registrata, quindi pesa poco sui telefoni.
-   ===================================================================== */
-@property --o{syntax:'<length>';inherits:false;initial-value:0px}
-
+/* Layout containment shared by the active visual layers. */
 .join,.setup,#zone,#banner,#lobby .top{position:relative;isolation:isolate;overflow:hidden}
 #big{isolation:isolate;overflow:hidden}
-
-:is(.join,.setup,#big,#zone[data-m=open],#banner.open,
-    #zone[data-m=locked],#banner.locked,#lobby .top,
-    #zone[data-m=lobby],#zone[data-m=pending],
-    #zone[data-m=answering],#banner.answering,#zone[data-m=waiting])::before{
-  content:'';position:absolute;z-index:-1;pointer-events:none;will-change:transform}
-
-/* raggi che girano: ingresso, host, QR a schermo intero, votazioni aperte */
-:is(.join,.setup,#big,#zone[data-m=open],#banner.open)::before{
-  left:50%;top:var(--cy,50%);width:130vmax;height:130vmax;margin:-65vmax 0 0 -65vmax;
-  background:repeating-conic-gradient(var(--c1) 0 7.5deg,var(--c2) 7.5deg 15deg);animation:spin var(--t,60s) linear infinite}
-.join,.setup,#big{--c1:#1f2bff;--c2:#1a24d9;--t:90s;--cy:72%}
-#zone[data-m=open]{--c1:#ffe500;--c2:#ffd000;--t:20s;--cy:60%}
-#banner.open{--c1:#ffe500;--c2:#ffd000;--t:18s}
-
-/* strisce di cantiere che scorrono: votazioni bloccate, sala d'attesa dell'host */
-:is(#zone[data-m=locked],#banner.locked,#lobby .top)::before{
-  inset:-60px;background:repeating-linear-gradient(135deg,var(--c1) 0 22px,var(--c2) 22px 44px);animation:slide var(--t,9s) linear infinite}
-#zone[data-m=locked],#banner.locked{--c1:#c9c9c4;--c2:#b9b9b2;--t:12s}
-#lobby .top{--c1:#ffe500;--c2:#ffd800;--t:8s}
-
-/* pallini che salgono: sala d'attesa e attesa di approvazione */
-:is(#zone[data-m=lobby],#zone[data-m=pending])::before{
-  inset:-60px;background:radial-gradient(circle,var(--c1) 0 5px,transparent 5.6px) 0 0/40px 40px;animation:rise var(--t,6s) linear infinite}
-#zone[data-m=lobby]{background:var(--blu);color:var(--gesso);--c1:#3a46ff;--t:6s}
-#zone[data-m=pending]{--c1:rgba(0,0,0,.13);--t:14s}
-
-/* onde che si allargano: tocca a voi / sta rispondendo */
-:is(#zone[data-m=answering],#banner.answering)::before{
-  inset:0;background:repeating-radial-gradient(circle at 50% var(--cy,56%),var(--c1) var(--o) calc(var(--o) + 34px),var(--c2) calc(var(--o) + 34px) calc(var(--o) + 68px));
-  animation:ring 1.3s linear infinite}
-#zone[data-m=answering],#banner.answering{--c1:#ff2fa0;--c2:#e01c8b}
-#banner.answering{--cy:50%}
-
-/* scacchiera che scivola: attesa degli altri */
-#zone[data-m=waiting]::before{
-  inset:-100px;background:conic-gradient(var(--c1) 25%,var(--c2) 0 50%,var(--c1) 0 75%,var(--c2) 0) 0 0/80px 80px;animation:drift 9s linear infinite}
-#zone[data-m=waiting]{--c1:#00c9b7;--c2:#00b5a5}
-
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes slide{to{transform:translate(31.113px,31.113px)}}   /* 44px / radice di 2: giro perfetto */
-@keyframes rise{to{transform:translateY(-40px)}}
-@keyframes drift{to{transform:translate(80px,80px)}}
-@keyframes ring{to{--o:68px}}
+#zone[data-m=lobby]{background:var(--blu);color:var(--gesso)}
 
 /* ---------- Buzzer: ogni stato ha il suo aspetto ---------- */
 #bz{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-#bz img{-webkit-user-drag:none;pointer-events:none}
+
 #bz.down{transform:translateY(12px);box-shadow:0 0 0 var(--nero)}
 #zone[data-m=lobby] #bz:disabled,#zone[data-m=waiting] #bz:disabled{filter:grayscale(1) brightness(.92)}
 #zone[data-m=answering] #bz:disabled{filter:none;transform:translateY(12px);box-shadow:0 0 0 var(--nero);animation:wobble .45s ease-in-out infinite alternate}

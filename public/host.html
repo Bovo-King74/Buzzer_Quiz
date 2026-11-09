@@ -5,7 +5,7 @@
 <link rel="icon" type="image/png" sizes="48x48" href="/assets/icons8-cicalino-48.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Host · Quiz animazione</title>
-<link rel="stylesheet" href="/style.css?v=clean-20261104">
+<link rel="stylesheet" href="/style.css?v=20261108">
 <style>
 #podium { position: fixed; inset: 0; z-index: 20; background: rgba(31,43,255,.95); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 20px; }
 #podium h1 { font-size: clamp(32px, 8vw, 64px); color: var(--giallo); }
@@ -15,16 +15,17 @@
 .lh-warn { background: var(--magenta); color: #fff; padding: 10px; font-weight: 700; margin-bottom: 10px; border: 3px solid var(--nero); }
 </style>
 <link rel="stylesheet" href="/refresh.css?v=clean-20261104">
-<link rel="stylesheet" href="/experience.css?v=20261105">
+<link rel="stylesheet" href="/experience.css?v=20261108">
 <link rel="stylesheet" href="/live-ui.css?v=20261105">
-<script src="/experience.js?v=20261105"></script>
-<script src="/live-ui.js?v=20261105"></script>
+<script src="/experience.js?v=20261108"></script>
+<script src="/live-ui.js?v=20261108"></script>
 <link rel="stylesheet" href="/profile.css?v=20261106">
-<link rel="stylesheet" href="/app-shell.css?v=20261106">
+<link rel="stylesheet" href="/app-shell.css?v=20261108">
 <link rel="stylesheet" href="/visuals.css?v=20261106">
 <script src="/profile.js?v=20261106"></script>
-<script src="/app-shell.js?v=20261106"></script>
-<script src="/visuals.js?v=20261106" defer></script>
+<script src="/app-shell.js?v=20261108"></script>
+<script src="/visuals.js?v=20261108" defer></script>
+<link rel="stylesheet" href="/studio.css?v=20261108">
 </head>
 <body data-view="host-setup">
 <div id="net" role="alert" hidden>Connessione persa… riconnessione</div>
@@ -43,7 +44,7 @@
     <form class="blk" id="jnf" autocomplete="off">
       <h2>Collega un altro dispositivo</h2>
       <input id="jc" placeholder="Codice partita" aria-label="Codice partita" maxlength="4" autocapitalize="characters">
-      <input id="jk" placeholder="Chiave host" aria-label="Chiave host" maxlength="8" autocapitalize="characters">
+      <input id="jk" placeholder="Chiave host" aria-label="Chiave host" maxlength="64" autocapitalize="characters">
       <button id="jn" type="submit">Entra come host</button>
       <small id="jerr" class="err"></small>
     </form>
@@ -54,7 +55,7 @@
   <aside id="rail">
     <div id="railjoin" hidden>
       <div class="code" id="code"></div>
-      <img id="qr" class="qr" alt="QR code per entrare" title="Ingrandisci">
+      <button class="qr-control" aria-label="Ingrandisci il codice QR"><img id="qr" class="qr" alt="QR code per entrare"></button>
       <small id="url"></small>
     </div>
     <div class="tg"><span>Chiave host</span><button id="key" style="margin-left:auto">Mostra</button></div>
@@ -78,7 +79,7 @@
       <div class="top">
         <div class="l"><div class="code" id="lcode"></div>
         <p>Inquadra il QR o apri <b id="lhost"></b> dal telefono e digita il codice.</p></div>
-        <img id="lqr" alt="QR code per entrare" title="Ingrandisci">
+        <button class="qr-control" aria-label="Ingrandisci il codice QR"><img id="lqr" alt="QR code per entrare"></button>
       </div>
       <div class="ros">
         <h2>Gruppi connessi <small id="lcnt"></small></h2>
@@ -127,14 +128,14 @@
   <div id="podium" hidden>
     <h1><img class="podium-trophy" src="/assets/quiz-trophy-generated.png" alt="" width="64" height="64"> Classifica finale</h1>
     <div id="podlist"></div>
-    <button class="ok" onclick="location.reload()">Nuova partita</button>
+    <button class="ok" onclick="localStorage.removeItem('hostGame');location.assign('/player.html#menu')">Nuova partita</button>
   </div>
 </main>
 
 <!-- barra comandi per telefono: cambia in base alla fase -->
 <div id="fab"><button></button><button></button></div>
 
-<div id="big" hidden><div class="code" id="bcode"></div><img id="bqr" alt=""></div>
+<div id="big" hidden role="dialog" aria-label="Codice QR ingrandito. Premi Escape per chiudere" tabindex="-1"><div class="code" id="bcode"></div><img id="bqr" alt=""></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/chat-easter-egg.js?v=clean-20261104"></script>
@@ -144,7 +145,7 @@ const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 let prevPhase = null, prevAns = null;
 let lastSqHash = '', lastOrderHash = '', lastAcHash = '';
 let cred = (() => { try { return JSON.parse(localStorage.hostGame || 'null'); } catch { return null; } })(), INFO = null, ST = null, pick = null, keyShown = false;
-const act = (type, x = {}) => { if (s.connected) s.emit('act', { type, ...x }); };
+const act = (type, x = {}) => { if (s.connected) s.emit('act', { type, roundId: ST?.live?.roundId, ans: ST?.ans, ...x }); };
 $('#lhost').textContent = $('#hostlink').textContent = location.host;
 $('#hostlink').textContent = location.host + '/host.html#collega';
 
@@ -166,8 +167,9 @@ function enter(r) {
   for (const id of ['#code', '#lcode', '#bcode']) $(id).textContent = r.code;
   for (const id of ['#qr', '#lqr', '#bqr']) $(id).src = r.qr;
   $('#url').textContent = r.url; $('#log').innerHTML = ''; r.hist.forEach(addMsg);
+  if (r.final) showFinal(r.final);
   fetch('/api/anims').then(x => x.json()).then(l => {
-    $('#stk').innerHTML = l.map(f => `<img src="assets/anim/${encodeURIComponent(f)}" data-f="${esc(f)}" alt="">`).join('');
+    $('#stk').innerHTML = l.map(f => `<button type="button" data-f="${esc(f)}" aria-label="Adesivo ${esc(f.replace(/\.[^.]+$/, ''))}" aria-pressed="false"><img loading="lazy" src="assets/anim/${encodeURIComponent(f)}" alt=""></button>`).join('');
   });
 }
 const gate = () => { $('#setup').hidden = false; $('#app').hidden = true; BuzzerShell.hostSetup(); };
@@ -188,14 +190,15 @@ $('#mkf').onsubmit = e => {
   BuzzerShell.createRoom(s, $('#mk'), $('#merr'), enter);
 };
 $('#jnf').onsubmit = e => { e.preventDefault(); join($('#jc').value.trim().toUpperCase(), $('#jk').value.trim().toUpperCase(), true); };
-s.on('ended', () => { localStorage.removeItem('hostGame'); location.hash = ''; location.reload(); });
+s.on('ended', () => { localStorage.removeItem('hostGame'); cred = null; if ($('#podium').hidden) gate(); });
 
-s.on('final', list => {
+function showFinal(list) {
   $('#podlist').innerHTML = list.slice(0, 10).map((p, i) =>
     `<div class="rg"><span class="rk">${['🥇','🥈','🥉'][i] || (i+1)}</span><img class="av" src="${p.avatar}" alt=""><span class="nm">${esc(p.nick)}</span><span class="sc">${p.score}</span></div>`
   ).join('');
   $('#podium').hidden = false;
-});
+}
+s.on('final', showFinal);
 
 /* ---------- stato ---------- */
 s.on('state', st => { ST = st; render(); });
@@ -229,7 +232,7 @@ function render() {
 
   if (!S.started) {  // sala d'attesa: nessun numero minimo
     $('#lcnt').textContent = plural(ok.length);
-    $('#lsq').innerHTML = ok.length ? ok.map((p, i) => row(p, S, i)).join('') : '<p class="vuoto">In attesa che i telefoni inquadrino il QR code…</p>';
+    $('#lsq').innerHTML = ok.length ? ok.map((p, i) => row(p, S, i)).join('') : '<p class="vuoto">La sala è pronta. Condividi il codice o fai inquadrare il QR.</p>';
     $('#bStart').textContent = `Avvia gioco (${plural(ok.length)})`;
     return;
   }
@@ -242,7 +245,7 @@ function render() {
   $('#bsm').textContent = S.phase === 'answering' ? 'Sta rispondendo' : S.phase === 'open' ? 'Chi preme per primo risponde' : 'Nessuno può prenotarsi';
   $('#bav').hidden = !A; if (A) $('#bav').src = A.avatar;
   const ready = ok.some(p => p.on);
-  $('#bOpen').disabled = S.phase !== 'locked' || !ready; $('#bOpen').textContent = S.phase === 'locked' && !ready ? 'Nessun gruppo collegato' : 'Apri votazioni';
+  $('#bOpen').disabled = S.phase !== 'locked' || !ready; const openLabel = S.phase === 'locked' && !ready ? 'Nessun gruppo collegato' : 'Apri votazioni'; if ($('#bOpen').textContent.trim() !== openLabel) $('#bOpen').textContent = openLabel;
   $('#bLock').disabled = S.phase === 'locked';
   $('#bOk').disabled = $('#bKo').disabled = S.phase !== 'answering';
   const cfg = { locked: [['Apri votazioni', 'ok', 'open', !ready], ['Nuova manche', '', 'newround']], open: [['Blocca', '', 'lock']], answering: [['Giusta', 'ok', 'correct'], ['Sbagliata', 'no', 'wrong']] }[S.phase];
@@ -274,7 +277,7 @@ $('#sChat').onchange = e => act('set', { key: 'chat', v: e.target.checked });
 $('#sAuto').onchange = e => act('set', { key: 'autoReopen', v: e.target.checked });
 $('#sPts').onchange = e => act('set', { key: 'pts', v: e.target.value });
 $('#key').onclick = e => { keyShown = !keyShown; e.target.textContent = keyShown ? INFO.key : 'Mostra'; };
-$('#qr').onclick = $('#lqr').onclick = () => $('#big').hidden = false; $('#big').onclick = () => $('#big').hidden = true;
+let qrFocus; document.querySelectorAll('.qr-control').forEach(button => button.onclick = () => { qrFocus = button; $('#big').hidden = false; $('#big').focus(); }); function closeQr() { $('#big').hidden = true; qrFocus?.focus(); } $('#big').onclick = closeQr; $('#big').onkeydown = e => { if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeQr(); } };
 const manage = e => {
   const action = e.target.closest('[data-player-action]');
   if (action) { BuzzerLive.openParticipant(action.dataset.playerAction); return; }
@@ -313,8 +316,8 @@ function addMsg(m) {
 }
 let unread = 0;
 s.on('chat', m => { addMsg(m); if (m.id !== 'host' && $('#p-ch').hidden) { $('#nChat').textContent = ++unread; $('#nChat').hidden = false; } });
-$('#stk').onclick = e => { const i = e.target.closest('img'); if (!i) return; pick = pick === i.dataset.f ? null : i.dataset.f; document.querySelectorAll('#stk img').forEach(x => x.classList.toggle('on', x.dataset.f === pick)); };
-const send = () => { const t = $('#ct').value.trim(); if (!t && !pick) return; openChatEasterEgg(t); s.emit('chat', { text: t, anim: pick }); $('#ct').value = ''; pick = null; document.querySelectorAll('#stk img').forEach(x => x.classList.remove('on')); };
+$('#stk').onclick = e => { const i = e.target.closest('button[data-f]'); if (!i) return; pick = pick === i.dataset.f ? null : i.dataset.f; document.querySelectorAll('#stk button').forEach(x => { const selected = x.dataset.f === pick; x.classList.toggle('on', selected); x.setAttribute('aria-pressed', String(selected)); }); };
+const send = () => { const t = $('#ct').value.trim(); if (!t && !pick) return; openChatEasterEgg(t); s.emit('chat', { text: t, anim: pick }); $('#ct').value = ''; pick = null; document.querySelectorAll('#stk button').forEach(x => { x.classList.remove('on'); x.setAttribute('aria-pressed', 'false'); }); };
 $('#cs').onclick = send;
 $('#ct').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); send(); } };
 

@@ -45,10 +45,12 @@
 
    - [x] **T-35 · Menu, profilo e personalizzazione visiva.** Menu a tre percorsi, creazione idempotente verificata dal backend, recupero regia con codice e chiave; barra condivisa con impostazioni e profilo locale separato dalla squadra; camera/galleria con ritaglio e conferma, colore buzzer con contrasto automatico. Liquid Glass JS e ShaderGradient locali, video originale dalle grafiche del progetto, animazioni confermate dal server e fallback accessibili. Misurato e risolto lo scroll interno superfluo del modulo desktop; controlli di gioco visibili/cliccabili alle tre risoluzioni richieste. Test realtime, Afterparty e Playwright; dettagli e limiti in docs/MENU-VERIFICATION.md. [Completato 06/11/2026; Sicurezza: 95% sui controlli eseguiti]
 
+   - [x] **T-33 · Correzioni e audit funzionale/sicurezza.** Input realtime validati e gestione errori, autorizzazioni/origini/creazione idempotente, chiavi host da 256 bit, avatar raster controllati, nessuna password predefinita Afterparty; ripristino coda Blocca/Apri, undo sicuro dopo rimozione e recupero finale/TV. Interfaccia studio live con buzzer fisico, chat/adesivi/QR da tastiera, audio preparato al primo gesto, aggiornamenti visuali condizionali; rimosso asset inutilizzato e CSS decorativo disattivato. Verifiche e limiti in docs/FINAL-VERIFICATION.md. [Completato 08/11/2026; Sicurezza: alta sui casi verificati, non certifica browser/dispositivi non provati]
+
+   - [x] **T-25 · Font locali.** Eliminato import Google esterno: Bricolage Grotesque 400/700 e Dela Gothic One 400 in WOFF2 locali con font-display:swap; file, licenze OFL e checksum verificati. Chrome conferma i font effettivi e zero richieste ai CDN font. Nessun preload generalizzato: il browser carica solo i subset richiesti. [Completato 08/11/2026; Sicurezza: alta sui controlli locali]
+
 3) Mansioni da svolgere:
-   - [ ] **T-33 · Correzioni emerse dall’audit.** Priorità: crash server da input non valido, Blocca/Apri e coda, Impostazioni sopra Invio chat; seguono riconnessione TV, undo con espulsioni, finale, accessibilità ed efficienza. Vedi `docs/AUDIT.md`.
    - [ ] **T-23 · Punti personalizzati.** Eventuale estensione del campo punti oltre i limiti attuali. Il timer configurabile e condiviso è completato (vedi T-31).
-   - [ ] **T-25 · Font di Google via `@import`.** Self-hosting dei woff2 con `font-display:swap` e `preload`. Sicurezza: 90%.
    - [ ] **T-30 · Storico delle manche.** Suono locale dei telefoni e temi personali completati (vedi T-31).
 
 # REGOLE DI COMPORTAMENTO (DA SEGUIRE SEMPRE)

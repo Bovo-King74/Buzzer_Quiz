@@ -1,6 +1,6 @@
 'use strict';
 const { Afterparty, clean } = require('./engine');
-module.exports = function mountAfterparty(io, { password }) {
+module.exports = function mountAfterparty(io, { password, configured = true }) {
   const game = new Afterparty();
   const ns = io.of('/afterparty');
   const limits = new Map();
@@ -37,6 +37,7 @@ module.exports = function mountAfterparty(io, { password }) {
       });
     }
     action('create', data => {
+      if (!configured) throw new Error('La regia deve configurare HOST_PASS sul server per usare Afterparty.');
       limit(ip + ':create', 10, 60000);
       if (clean(data.password, 200).toUpperCase() !== password) throw new Error('Parola chiave host errata.');
       const room = game.create(); bind(room, room.host, null); return { code: room.code, token: room.host };

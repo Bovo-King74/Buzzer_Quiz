@@ -49,7 +49,7 @@ npm install
 
 Le stanze del quiz si creano direttamente dal pulsante **Crea stanza**, senza password. Per collegare un altro host a una stanza esistente servono ancora codice e chiave host.
 
-La variabile opzionale `HOST_PASS` riguarda soltanto il plugin Afterparty (valore predefinito `KJB`):
+`HOST_PASS` deve essere configurata per creare stanze del plugin Afterparty. Non esiste una password predefinita; il quiz principale non la richiede:
 
 ```bash
 export HOST_PASS="MIACHIAVE"
@@ -157,3 +157,17 @@ npm run test:ui        # suite Playwright del nuovo percorso, profilo e layout
 Server e bundle statici mantengono il runtime Node 18+; gli strumenti di sviluppo e Playwright richiedono Node 20+ (verificati con Node 24). Per i test Chromium la configurazione usa Chrome installato; `npx playwright install webkit` permette di predisporre WebKit quando disponibile, configurandolo nei progetti Playwright. Il deploy può servire i bundle già presenti in `public/vendor` senza eseguire una build sul server.
 
 [Misure dello scroll, screenshot e risultati delle prove](docs/MENU-VERIFICATION.md). Il vecchio ingresso aveva il form interno alto circa 833 px: a 1280×720 scorreva di 113 px e a 1366×768 di 65 px. Il nuovo layout usa l’altezza disponibile dopo la barra, senza bloccare globalmente lo scroll: reflow e contenuti più grandi possono continuare a scorrere.
+
+
+## Audit e regressioni — novembre 2026
+
+```sh
+npm run test:security     # input ostili, ruoli, origini, avatar e isolamento su server locale
+npm run test:regressions  # Playwright: stanze indipendenti, riconnessioni, finale e usabilità
+```
+
+Le chiavi host delle nuove stanze sono segreti casuali da 256 bit. Il codice pubblico serve soltanto a giocare o visualizzare la TV. Conserva la chiave host per riprendere la regia su un altro dispositivo. `BUZZER_ALLOWED_ORIGINS` consente, se necessario, origini browser aggiuntive separate da virgole; per impostazione predefinita i collegamenti browser devono avere la stessa origine dell’app. I client senza header Origin devono comunque autenticare ogni ruolo.
+
+Le stanze vivono nella memoria del processo; riavvio o redeploy ne perdono lo stato. Il finale resta recuperabile nella finestra di chiusura di 12 secondi; la classifica già aperta rimane visibile quando la stanza viene eliminata.
+
+Copertura, difetti corretti e limiti sono riportati in [verifica finale](docs/FINAL-VERIFICATION.md), [sicurezza](docs/SECURITY-FIXES.md), [checklist funzionale](docs/FUNCTIONAL-CHECKLIST.md) e [pulizia](docs/CLEANUP-REVIEW.md).

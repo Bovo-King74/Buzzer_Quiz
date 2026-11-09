@@ -1,5 +1,7 @@
 # Audit di Buzzer dal punto di vista dell’uso — 6 novembre 2026
 
+> Rapporto storico del 06/11/2026. Le correzioni e le verifiche successive sono in [SECURITY-FIXES.md](SECURITY-FIXES.md) e [FUNCTIONAL-CHECKLIST.md](FUNCTIONAL-CHECKLIST.md). `test/audit-realtime.js` ora esegue regressioni di accettazione; non riproduce più deliberatamente i vecchi difetti.
+
 Revisione della versione `95e7c17`, eseguita in Chrome headless locale con contesti indipendenti per host, partecipanti e TV. Click, tastiera, form, caricamento file e schermate osservate; le prove Socket.IO isolate completano i percorsi che non possono essere generati dalla normale UI. Nessuna correzione al codice applicativo, nessun commit o push durante questo audit.
 
 Questo rapporto descrive ciò che è stato riprodotto. Non è possibile certificare l’assenza di altri difetti né provare tutte le combinazioni di rete, browser e preferenze. La matrice copre le singole opzioni censite; le combinazioni sono mirate ai punti di rischio. Le prove automatiche che confermano un bug non sono test di correttezza superati dal prodotto.

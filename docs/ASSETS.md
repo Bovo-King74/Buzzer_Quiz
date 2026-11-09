@@ -49,3 +49,29 @@ Il suono locale di pressione, le conferme di fallback, applauso, fanfara, rullo 
 ## Immagini preesistenti
 
 Sono mantenuti il buzzer, il favicon Icons8, le illustrazioni della serata e del trofeo e gli adesivi già presenti nel repository. Nessuna nuova fotografia o immagine generata è stata aggiunta in questo intervento. Le attribuzioni e i diritti originali degli asset preesistenti restano di competenza del progetto.
+
+## Font locali — 8 novembre 2026
+
+Le famiglie già usate da Buzzer sono ora servite da `public/assets/fonts/`, senza import CSS o richieste font a domini esterni durante l’uso. Gli URL binari sono stati ricavati dal [CSS ufficiale Google Fonts](https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;700&family=Dela+Gothic+One&display=swap), scaricato con risposta HTTP 200. Ogni WOFF2 ha restituito `font/woff2`; sono state verificate firma `wOF2` e lunghezza binaria dichiarata. `manifest.json` conserva URL esatti, data, dimensioni e SHA-256.
+
+| Famiglia / file | Pesi | Byte |
+| --- | --- | ---: |
+| `bricolage-grotesque-latin.woff2` | 400 e 700, stesso file variabile | 41.236 |
+| `bricolage-grotesque-latin-ext.woff2` | 400 e 700 | 18.740 |
+| `bricolage-grotesque-vietnamese.woff2` | 400 e 700 | 8.652 |
+| `dela-gothic-one-latin.woff2` | 400 | 13.800 |
+| `dela-gothic-one-latin-ext.woff2` | 400 | 9.040 |
+| `dela-gothic-one-vietnamese.woff2` | 400 | 4.808 |
+| `dela-gothic-one-greek.woff2` | 400 | 5.232 |
+| `dela-gothic-one-cyrillic.woff2` | 400 | 7.256 |
+
+Totale binari nel repository: **108.764 byte**. I due subset latini usati nel controllo italiano totalizzano **55.036 byte**; i pesi Bricolage condividono lo stesso download. Gli altri subset vengono richiesti solo quando i caratteri visualizzati lo richiedono, tramite `unicode-range`. Accenti italiani inclusi. Gli altri sistemi di scrittura, compresi i numerosi subset CJK di Dela non distribuiti qui, usano i fallback di sistema già presenti nello stack CSS. Tutte le facce hanno `font-display: swap`.
+
+Entrambe le famiglie sono distribuite sotto **SIL Open Font License 1.1**. I testi completi con copyright sono conservati accanto ai binari:
+
+- [BricolageGrotesque-OFL.txt](../public/assets/fonts/BricolageGrotesque-OFL.txt), dal [repository ufficiale Google Fonts, commit verificato](https://github.com/google/fonts/blob/6ce172f74aa355ea43eb964fa4a91570a4d3064d/ofl/bricolagegrotesque/OFL.txt). Copyright Bricolage Grotesque Project Authors, 2022.
+- [DelaGothicOne-OFL.txt](../public/assets/fonts/DelaGothicOne-OFL.txt), dal [repository ufficiale Google Fonts, commit verificato](https://github.com/google/fonts/blob/690b65d64dabaebf9d18e2d7e8c8e7e02b4cccaf/ofl/delagothicone/OFL.txt). Copyright Dela Gothic Project Authors, 2020.
+
+Mantenere copyright e licenze insieme ai font nelle redistribuzioni. Non è richiesta un’attribuzione visibile analoga al link Icons8; i file non sono venduti separatamente né rinominati come un nuovo carattere.
+
+Verifica Chrome locale: font Bricolage 400, Bricolage 700 e Dela 400 realmente usati sui glifi italiani secondo `CSS.getPlatformFontsForNode`, due richieste WOFF2 locali, zero richieste font a Google, nessuna eccezione di pagina. Artefatto: `.taste-skill/cleanup-review/font-check.json`.
