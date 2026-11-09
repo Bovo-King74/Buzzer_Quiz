@@ -60,7 +60,7 @@ function ProductDemo() {
                 <div className="bd-player">
                   <div className="bd-label">Il vostro buzzer</div>
                   <div className="bd-buzzer" data-target="buzz" data-cursor="hand" data-ready={s.open} data-down={s.pressed} data-confirmed={s.confirmed}>
-                    <div className="bd-face"><div className="bd-type"><span>BUZZ</span>
+                    <div className="bd-face"><div className="bd-type"><img src="/assets/buzzer.png" alt="" draggable="false" width="309" height="412"/>
                     <div className="bd-badge"><States value={phase(s)} states={{lobby:'Bloccato',joined:'Bloccato',open:'Premi!',sent:'Inviato',confirmed:'Prenotati'}}/></div></div></div>
                   </div>
                 </div>
