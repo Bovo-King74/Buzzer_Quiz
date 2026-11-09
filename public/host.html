@@ -26,6 +26,8 @@
 <script src="/app-shell.js?v=20261108"></script>
 <script src="/visuals.js?v=20261108" defer></script>
 <link rel="stylesheet" href="/studio.css?v=20261108">
+<link rel="stylesheet" href="/motion.css?v=20261109">
+<script src="/motion.js?v=20261109"></script>
 </head>
 <body data-view="host-setup">
 <div id="net" role="alert" hidden>Connessione persa… riconnessione</div>
@@ -232,7 +234,7 @@ function render() {
 
   if (!S.started) {  // sala d'attesa: nessun numero minimo
     $('#lcnt').textContent = plural(ok.length);
-    $('#lsq').innerHTML = ok.length ? ok.map((p, i) => row(p, S, i)).join('') : '<p class="vuoto">La sala è pronta. Condividi il codice o fai inquadrare il QR.</p>';
+    BuzzerMotion.reconcile($('#lsq'), ok.length ? ok.map((p, i) => row(p, S, i)).join('') : '<p class="vuoto">La sala è pronta. Condividi il codice o fai inquadrare il QR.</p>');
     $('#bStart').textContent = `Avvia gioco (${plural(ok.length)})`;
     return;
   }
@@ -254,13 +256,13 @@ function render() {
   // ordine di prenotazione (T-08 e T-14)
   const orderHtml = S.order.length ? S.order.map((o, i) => {
     const p = by[o.id], d = i ? ' +' + ((o.t - S.order[i - 1].t) / 1000).toFixed(1) + 's' : '';
-    return `<li class="${o.id === S.ans ? 'cur' : S.answered.includes(o.id) ? 'ko' : ''}"><b>${i + 1}</b>${p ? esc(p.nick) : '(rimosso)'}<small>${new Date(o.t).toLocaleTimeString('it-IT')}${d}</small></li>`;
+    return `<li data-id="${o.id}" class="${o.id === S.ans ? 'cur' : S.answered.includes(o.id) ? 'ko' : ''}"><b>${i + 1}</b>${p ? esc(p.nick) : '(rimosso)'}<small>${new Date(o.t).toLocaleTimeString('it-IT')}${d}</small></li>`;
   }).join('') : '<li class="vuoto">Nessuna prenotazione in questa manche</li>';
-  if (orderHtml !== lastOrderHash) { $('#order').innerHTML = orderHtml; lastOrderHash = orderHtml; }
+  if (orderHtml !== lastOrderHash) { BuzzerMotion.reconcile($('#order'), orderHtml); lastOrderHash = orderHtml; }
 
   $('#cnt').textContent = plural(ok.length);
   const sqHtml = ok.length ? ok.map((p, i) => row(p, S, i)).join('') : '<p class="vuoto">Nessun gruppo connesso.</p>';
-  if (sqHtml !== lastSqHash) { $('#sq').innerHTML = sqHtml; lastSqHash = sqHtml; }
+  if (sqHtml !== lastSqHash) { BuzzerMotion.reconcile($('#sq'), sqHtml); lastSqHash = sqHtml; }
 }
 
 /* ---------- comandi ---------- */

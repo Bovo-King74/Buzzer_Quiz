@@ -106,7 +106,7 @@
 
 
 :root{--blu:#1f2bff;--gesso:#fffdf5;--nero:#000;--giallo:#ffe500;--magenta:#ff2fa0;--teal:#00c9b7;--cemento:#c9c9c4}
-*{box-sizing:border-box;margin:0;border-radius:0}
+*:not(:where(.ss-stage,.ss-stage *)){box-sizing:border-box;margin:0;border-radius:0}
 [hidden]{display:none!important}
 html,body{height:100%}
 body{background:var(--blu);color:var(--gesso);font:15px/1.35 'Bricolage Grotesque',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}

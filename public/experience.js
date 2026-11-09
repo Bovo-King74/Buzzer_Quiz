@@ -236,7 +236,8 @@
     currentMode = mode || (live?.paused ? 'paused' : live?.countdown ? 'countdown' : 'lobby');
     root.dataset.uxState = currentMode;
     const badge = document.querySelector('.buzzer-state');
-    if (badge) badge.textContent = currentMode === 'open' ? 'Pronto' : ['answering', 'queued', 'waiting'].includes(currentMode) ? 'Prenotato' : 'Chiuso';
+    if (badge) badge.textContent = ({open:'Pronto',answering:'Tocca a voi',queued:'In coda',waiting:'Attendi',paused:'In pausa',countdown:'Al via',spectator:'Spettatore',pending:'In attesa',lobby:'In stanza'})[currentMode] || 'Chiuso';
+    if (changedRound) { clearTimeout(pulseTimeout); root.dataset.uxPulse = 'false'; document.getElementById('bz')?.classList.remove('buzz-confirmed'); }
     if (changedRound && toastRegion) toastRegion.replaceChildren();
     attachAmbient();
   }

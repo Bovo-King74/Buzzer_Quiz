@@ -67,8 +67,8 @@
   function syncVideo() {
     const video = document.getElementById('menu-video');
     if (!video) return;
-    const shouldPlay = role() === 'menu' && mayAnimate();
-    if (role() === 'menu' && mayDecorate() && !poster) {
+    const shouldPlay = role() === 'menu' && visible(video) && mayAnimate();
+    if (role() === 'menu' && visible(video) && mayDecorate() && !poster) {
       poster = new Image(); poster.src = '/assets/menu-loop-poster.jpg';
       poster.onload = () => { if (instances.size) refresh(); };
     }
@@ -96,7 +96,7 @@
     const shaderCanvas = stage?.querySelector('canvas');
     try { if (shaderCanvas) drawCover(ctx, shaderCanvas, canvas.width, canvas.height, .65); } catch {}
     const video = document.getElementById('menu-video');
-    if (role() === 'menu') {
+    if (role() === 'menu' && visible(video)) {
       try { if (video?.readyState >= 2) drawCover(ctx, video, canvas.width, canvas.height, .35); else if (poster?.complete) drawCover(ctx, poster, canvas.width, canvas.height, .35); } catch {}
     }
     return canvas;

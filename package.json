@@ -10,7 +10,9 @@
     "test:afterparty:integration": "node --test test/afterparty.integration.js",
     "test:browser": "node test/browser-smoke.mjs",
     "build:visuals": "node visuals-src/build.mjs",
+    "build:demo": "node visuals-src/buzzer-demo/build.mjs",
     "test:ui": "playwright test",
+    "test:motion": "PW_MOTION=1 playwright test",
     "test:security": "node --test test/security-regressions.test.js",
     "test:regressions": "PW_FULL_AUDIT=1 playwright test"
   },

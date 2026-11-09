@@ -2,7 +2,7 @@ const { defineConfig } = require('@playwright/test');
 const port = Number(process.env.PW_PORT || 3150);
 module.exports = defineConfig({
   testDir: './test',
-  testMatch: process.env.PW_FULL_AUDIT === '1' ? 'full-audit.spec.js' : 'menu-profile.spec.js',
+  testMatch: process.env.PW_FULL_AUDIT === '1' ? 'full-audit.spec.js' : process.env.PW_MOTION === '1' ? 'motion.spec.js' : 'menu-profile.spec.js',
   fullyParallel: false,
   workers: 1,
   timeout: 90000,

@@ -18,6 +18,11 @@
 <script src="/app-shell.js?v=20261108"></script>
 <script src="/visuals.js?v=20261108" defer></script>
 <link rel="stylesheet" href="/studio.css?v=20261108">
+<link rel="stylesheet" href="/vendor/kit/stageshow.css?v=20261109">
+<link rel="stylesheet" href="/vendor/buzzer-demo.css?v=20261109">
+<script type="module" src="/vendor/buzzer-demo.js?v=20261109"></script>
+<link rel="stylesheet" href="/motion.css?v=20261109">
+<script src="/motion.js?v=20261109"></script>
 </head>
 <body class="pl" data-view="menu">
 <div id="net" role="alert" hidden>Connessione persa… riconnessione</div>
@@ -30,7 +35,7 @@
       <a id="menu-host" href="/host.html#resume"><span>Entra come host<small>Riprendi la regia con codice e chiave host</small></span><span aria-hidden="true">→</span></a>
     </nav><p id="menu-status" role="status"></p>
   </div>
-  <div class="menu-scene"><video id="menu-video" muted loop playsinline preload="none" poster="/assets/menu-loop-poster.jpg" data-src="/assets/menu-loop.webm" aria-hidden="true"></video><div class="menu-scene-caption"><span>Buzzer</span><p>Pronti. Insieme.<br>Al momento giusto.</p></div></div>
+  <div class="menu-scene" data-ui><video id="menu-video" muted loop playsinline preload="none" poster="/assets/menu-loop-poster.jpg" data-src="/assets/menu-loop.webm" aria-hidden="true"></video><div id="buzzer-product-demo"><p class="demo-equivalent">Demo Buzzer: entrate in stanza, aspettate il via e premete. Il server conferma la prenotazione.</p></div></div>
 </section>
 
 <section id="join" class="join" hidden>
@@ -115,10 +120,10 @@ $('#f').onchange = e => {
 // T-05 & T-21: Connessione protetta da doppio tap con feedback
 function join(d) {
   $('#go').disabled = true;
-  $('#go').textContent = 'Connessione…';
+  $('#go').textContent = 'Connessione…'; $('#go').setAttribute('aria-busy','true');
   s.emit('join', d, r => {
     $('#go').disabled = false;
-    $('#go').textContent = 'Entra';
+    $('#go').textContent = 'Entra in partita'; $('#go').removeAttribute('aria-busy');
     if (r.err) {
       $('#err').textContent = r.err;
       if (!d.nick) { localStorage.removeItem('qz'); cred = null; }
@@ -180,9 +185,11 @@ s.on('me', m => {
     const d = m.score - prev; restart($('#sc'), d > 0 ? 'pop' : 'drop'); flash((d > 0 ? '+' : '') + d, d < 0);
     if (BuzzerUX.getPreferences().motion !== 'reduce' && !matchMedia('(prefers-reduced-motion: reduce)').matches && navigator.vibrate) navigator.vibrate(d > 0 ? [60, 40, 60, 40, 120] : 200);
   }
-  $('#zone').dataset.m = m.mode; $('#bz').disabled = m.mode !== 'open' || pendingBuzz; $('#bz').classList.remove('down');
-  $('#lb').textContent = (T[m.mode] || T.locked)[0]; if (changed) restart($('#lb'), 'slam');
-  $('#sb').textContent = m.mode === 'waiting' ? (m.who ? `Sta rispondendo ${m.who}.` : 'Avete già risposto in questa manche.') : m.mode === 'queued' ? `Siete ${m.position}° in coda.${m.who ? ' Sta rispondendo ' + m.who + '.' : ''}` : (T[m.mode] || T.locked)[1];
+  $('#zone').dataset.m = m.mode; $('#bz').disabled = m.mode !== 'open' || pendingBuzz; if (!pendingBuzz) $('#bz').classList.remove('down');
+  $('#bz').setAttribute('aria-label', `Buzzer · ${pendingBuzz ? 'Pressione inviata' : (T[m.mode] || T.locked)[0]}`);
+  $('#bz').setAttribute('aria-busy', String(pendingBuzz));
+  $('#lb').textContent = pendingBuzz ? 'Pressione inviata' : (T[m.mode] || T.locked)[0]; if (changed) restart($('#lb'), 'slam');
+  $('#sb').textContent = pendingBuzz ? 'Attendo la conferma del server…' : m.mode === 'waiting' ? (m.who ? `Sta rispondendo ${m.who}.` : 'Avete già risposto in questa manche.') : m.mode === 'queued' ? `Siete ${m.position}° in coda.${m.who ? ' Sta rispondendo ' + m.who + '.' : ''}` : (T[m.mode] || T.locked)[1];
   $('#chb').hidden = !m.chat || m.mode === 'pending';
   if (!m.chat) $('#chat').hidden = true;
   if (changed && BuzzerUX.getPreferences().motion !== 'reduce' && !matchMedia('(prefers-reduced-motion: reduce)').matches && navigator.vibrate && (m.mode === 'open' || m.mode === 'answering')) navigator.vibrate(m.mode === 'open' ? 80 : [120, 60, 120]);
@@ -196,12 +203,14 @@ function pressBuzzer() {
   const sequence = ++buzzSequence, roundId = me.live?.roundId;
   BuzzerUX.unlock().then(() => BuzzerUX.play('press', { channel: 'buzz' }));
   $('#bz').classList.add('down'); $('#bz').disabled = true;
-  document.querySelector('.buzzer-state').textContent = 'Premuto';
+  document.querySelector('.buzzer-state').textContent = 'Inviato'; $('#bz').setAttribute('aria-busy','true'); $('#bz').setAttribute('aria-label','Buzzer · pressione inviata');
   $('#lb').textContent = 'Pressione inviata';
   $('#sb').textContent = 'Attendo la conferma del server…';
   s.timeout(4000).emit('buzz', { roundId, requestId: window.crypto?.randomUUID?.() || `${Date.now()}-${sequence}` }, (error, result) => {
     if (sequence !== buzzSequence || roundId !== me.live?.roundId) return;
-    pendingBuzz = false; $('#bz').classList.remove('down');
+    if (!['open','answering','queued'].includes(me.mode)) { pendingBuzz = false; $('#bz').classList.remove('down'); $('#bz').setAttribute('aria-busy','false'); return; }
+    pendingBuzz = false; $('#bz').classList.remove('down'); $('#bz').setAttribute('aria-busy','false');
+    if (error && ['answering','queued'].includes(me.mode)) return;
     if (error) {
       $('#lb').textContent = 'Conferma non ricevuta';
       $('#sb').textContent = 'Attendi lo stato aggiornato. La rete potrebbe essere lenta.';
@@ -216,8 +225,10 @@ function pressBuzzer() {
       return;
     }
     BuzzerUX.pulse();
-    $('#lb').textContent = result.position === 1 ? 'Prenotazione accettata · tocca a voi' : 'Prenotazione accettata';
-    $('#sb').textContent = result.position === 1 ? 'Rispondete ora. Aspettate il verdetto.' : `Siete ${result.position}° in coda. Aspettate il vostro turno.`;
+    const position = me.mode === 'answering' ? 1 : me.mode === 'queued' ? me.position || result.position : result.position;
+    $('#bz').setAttribute('aria-label', position === 1 ? 'Buzzer · prenotazione confermata, tocca a voi' : `Buzzer · prenotati in posizione ${position}`);
+    $('#lb').textContent = position === 1 ? 'Prenotazione accettata · tocca a voi' : 'Prenotazione accettata';
+    $('#sb').textContent = position === 1 ? 'Rispondete ora. Aspettate il verdetto.' : `Siete ${position}° in coda. Aspettate il vostro turno.`;
   });
 }
 $('#bz').onpointerdown = event => { if (event.isPrimary && event.button === 0) { event.preventDefault(); pressBuzzer(); } };
@@ -231,7 +242,7 @@ const net = () => {
   if (!s.connected) {
     $('#lb').textContent = 'Connessione persa';
     $('#sb').textContent = 'Sto provando a rientrare. Il buzzer è temporaneamente bloccato.';
-    $('#bz').disabled = true; document.querySelector('.buzzer-state').textContent = 'Offline'; pendingBuzz = false; ++buzzSequence;
+    $('#bz').disabled = true; document.querySelector('.buzzer-state').textContent = 'Offline'; pendingBuzz = false; ++buzzSequence; $('#bz').classList.remove('down'); $('#bz').setAttribute('aria-busy','false'); $('#bz').setAttribute('aria-label','Buzzer · connessione persa');
   }
 };
 s.on('disconnect', net); s.on('connect_error', net); s.on('connect', net);

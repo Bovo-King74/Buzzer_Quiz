@@ -58,6 +58,8 @@ body { background: var(--blu); color: var(--gesso); min-height: 100dvh; display:
 <script src="/experience.js?v=20261108"></script>
 <script src="/live-ui.js?v=20261108"></script>
 <link rel="stylesheet" href="/studio.css?v=20261108">
+<link rel="stylesheet" href="/motion.css?v=20261109">
+<script src="/motion.js?v=20261109"></script>
 </head>
 <body>
 
@@ -179,12 +181,12 @@ function renderTv() {
     $('#tv-game').hidden = true;
     $('#tvstatus').textContent = 'Fase d’ingresso';
     $('#tvcount').textContent = ok.length;
-    $('#tv-teams-list').innerHTML = ok.map(p => `
-      <div class="tv-team-badge" data-player-id="${p.id}">
+    BuzzerMotion.reconcile($('#tv-teams-list'), ok.map(p => `
+      <div class="tv-team-badge" data-player-id="${p.id}" data-id="${p.id}">
         <img class="av" src="${p.avatar}" alt="">
         <span>${esc(p.nick)}</span>
       </div>
-    `).join('') || '<p style="padding:10px;opacity:.7">Nessuna squadra connessa ancora.</p>';
+    `).join('') || '<p style="padding:10px;opacity:.7">Nessuna squadra connessa ancora.</p>');
     return;
   }
 
@@ -201,20 +203,20 @@ function renderTv() {
   if (A) $('#tv-bav').src = A.avatar;
 
   // Ordine buzz
-  $('#tv-order-list').innerHTML = S.order.length ? S.order.map((o, i) => {
+  BuzzerMotion.reconcile($('#tv-order-list'), S.order.length ? S.order.map((o, i) => {
     const p = by[o.id], d = i ? ' +' + ((o.t - S.order[i - 1].t) / 1000).toFixed(1) + 's' : '';
-    return `<li class="${o.id === S.ans ? 'cur' : S.answered.includes(o.id) ? 'ko' : ''}"><b>#${i + 1}</b><span>${p ? esc(p.nick) : '(rimosso)'}</span><small style="margin-left:auto">${d}</small></li>`;
-  }).join('') : '<li style="border:none;opacity:.6">Nessuna prenotazione</li>';
+    return `<li data-id="${o.id}" class="${o.id === S.ans ? 'cur' : S.answered.includes(o.id) ? 'ko' : ''}"><b>#${i + 1}</b><span>${p ? esc(p.nick) : '(rimosso)'}</span><small style="margin-left:auto">${d}</small></li>`;
+  }).join('') : '<li style="border:none;opacity:.6">Nessuna prenotazione</li>');
 
   // Leaderboard
-  $('#tv-leaderboard').innerHTML = ok.map((p, i) => `
-    <div data-player-id="${p.id}" class="rg ${p.id === S.ans ? 'cur' : p.on ? '' : 'off'}">
+  BuzzerMotion.reconcile($('#tv-leaderboard'), ok.map((p, i) => `
+    <div data-player-id="${p.id}" data-id="${p.id}" class="rg ${p.id === S.ans ? 'cur' : p.on ? '' : 'off'}">
       <span class="rk">${['🥇','🥈','🥉'][i] || (i + 1)}</span>
       <img class="av" src="${p.avatar}" alt="">
       <span class="nm">${esc(p.nick)}</span>
       <span class="sc">${p.score}</span>
     </div>
-  `).join('');
+  `).join(''));
 }
 BuzzerLive.attach(s, 'tv');
 </script>

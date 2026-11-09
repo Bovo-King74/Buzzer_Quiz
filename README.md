@@ -171,3 +171,11 @@ Le chiavi host delle nuove stanze sono segreti casuali da 256 bit. Il codice pub
 Le stanze vivono nella memoria del processo; riavvio o redeploy ne perdono lo stato. Il finale resta recuperabile nella finestra di chiusura di 12 secondi; la classifica già aperta rimane visibile quando la stanza viene eliminata.
 
 Copertura, difetti corretti e limiti sono riportati in [verifica finale](docs/FINAL-VERIFICATION.md), [sicurezza](docs/SECURITY-FIXES.md), [checklist funzionale](docs/FUNCTIONAL-CHECKLIST.md) e [pulizia](docs/CLEANUP-REVIEW.md).
+
+## Movimento, interazioni e demo Buzzer
+
+La home include una demo Stageshow dichiarata e separata dalle partite: ingresso, apertura del turno, pressione e prenotazione confermata. Ha una composizione mobile dedicata, un poster statico per movimento ridotto e si arresta quando non è visibile. **Ferma** mostra il poster; **Riproduci** riavvia la sequenza.
+
+Il quiz usa feedback condivisi per pulsanti e pannelli, pressione locale immediata del buzzer e conferma dal server. Lobby, coda e classifica conservano le righe e il focus durante gli aggiornamenti. Nessuna nuova dipendenza npm.
+
+`npm run build:demo` ricompila la scena; `npm run test:motion` verifica invio immediato, tap ripetuti, ACK tardivi, focus durante il riordino, riconnessione e demo accessibile. Con FFmpeg di Playwright installato, `PW_RECORD_MOTION=1 npm run test:motion` salva anche i video locali. [File, prove e limiti della verifica](docs/MOTION-VERIFICATION.md), [rehearsal Stageshow](visuals-src/buzzer-demo/REHEARSAL.md).
